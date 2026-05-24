@@ -222,7 +222,7 @@
                             <option value="">Todos</option>
                             @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
                             {
-                                <option value="@b" @(Model.Bank == b ? "selected" : "")>@b</option>
+                                <option value="@b" selected="@(Model.Bank == b)">@b</option>
                             }
                         </select>
                     </div>
@@ -232,8 +232,8 @@
                         <label class="field__label">Moneda</label>
                         <select name="currency" class="select">
                             <option value="">Todas</option>
-                            <option value="CRC" @(Model.Currency == "CRC" ? "selected" : "")>CRC</option>
-                            <option value="USD" @(Model.Currency == "USD" ? "selected" : "")>USD</option>
+                            <option value="CRC" selected="@(Model.Currency == "CRC")">CRC</option>
+                            <option value="USD" selected="@(Model.Currency == "USD")">USD</option>
                         </select>
                     </div>
                 </div>
@@ -242,10 +242,10 @@
                         <label class="field__label">Tipo</label>
                         <select name="movementType" class="select">
                             <option value="">Todos</option>
-                            <option value="compra" @(Model.MovementType == "compra" ? "selected" : "")>Compra</option>
-                            <option value="servicio" @(Model.MovementType == "servicio" ? "selected" : "")>Servicio</option>
-                            <option value="suscripcion" @(Model.MovementType == "suscripcion" ? "selected" : "")>Suscripción</option>
-                            <option value="retiro_cajero" @(Model.MovementType == "retiro_cajero" ? "selected" : "")>Retiro ATM</option>
+                            <option value="compra" selected="@(Model.MovementType == "compra")">Compra</option>
+                            <option value="servicio" selected="@(Model.MovementType == "servicio")">Servicio</option>
+                            <option value="suscripcion" selected="@(Model.MovementType == "suscripcion")">Suscripción</option>
+                            <option value="retiro_cajero" selected="@(Model.MovementType == "retiro_cajero")">Retiro ATM</option>
                         </select>
                     </div>
                 </div>
@@ -254,8 +254,8 @@
                         <label class="field__label">Estado</label>
                         <select name="status" class="select">
                             <option value="">Todos</option>
-                            <option value="Aprobada" @(Model.Status == "Aprobada" ? "selected" : "")>Aprobada</option>
-                            <option value="Rechazada" @(Model.Status == "Rechazada" ? "selected" : "")>Rechazada</option>
+                            <option value="Aprobada" selected="@(Model.Status == "Aprobada")">Aprobada</option>
+                            <option value="Rechazada" selected="@(Model.Status == "Rechazada")">Rechazada</option>
                         </select>
                     </div>
                 </div>
@@ -266,7 +266,7 @@
                             <option value="">Todas</option>
                             @foreach (var cat in Model.Categories)
                             {
-                                <option value="@cat.CategoryId" @(Model.CategoryId == cat.CategoryId ? "selected" : "")>@cat.IconEmoji @cat.Name</option>
+                                <option value="@cat.CategoryId" selected="@(Model.CategoryId == cat.CategoryId)">@cat.IconEmoji @cat.Name</option>
                             }
                         </select>
                     </div>
@@ -278,7 +278,7 @@
                             <option value="">Todas</option>
                             @foreach (var card in Model.Cards)
                             {
-                                <option value="@card.CardId" @(Model.CardId == card.CardId ? "selected" : "")>@card.DisplayName</option>
+                                <option value="@card.CardId" selected="@(Model.CardId == card.CardId)">@card.DisplayName</option>
                             }
                         </select>
                     </div>
@@ -299,10 +299,10 @@
                     <div class="field">
                         <label class="field__label">Ordenar</label>
                         <select name="sort" class="select">
-                            <option value="date_desc" @(Model.Sort == "date_desc" ? "selected" : "")>Más reciente</option>
-                            <option value="date_asc" @(Model.Sort == "date_asc" ? "selected" : "")>Más antiguo</option>
-                            <option value="amount_desc" @(Model.Sort == "amount_desc" ? "selected" : "")>Mayor monto</option>
-                            <option value="amount_asc" @(Model.Sort == "amount_asc" ? "selected" : "")>Menor monto</option>
+                            <option value="date_desc" selected="@(Model.Sort == "date_desc")">Más reciente</option>
+                            <option value="date_asc" selected="@(Model.Sort == "date_asc")">Más antiguo</option>
+                            <option value="amount_desc" selected="@(Model.Sort == "amount_desc")">Mayor monto</option>
+                            <option value="amount_asc" selected="@(Model.Sort == "amount_asc")">Menor monto</option>
                         </select>
                     </div>
                 </div>
