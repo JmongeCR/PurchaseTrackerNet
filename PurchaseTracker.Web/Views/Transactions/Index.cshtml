@@ -25,358 +25,523 @@
             reference    = $"#{t.TransactionId}"
         })
     );
+
+    // Group transactions by date for the feed view
+    var grouped = Model.Transactions
+        .GroupBy(t => t.TransactionDate.Date)
+        .OrderByDescending(g => g.Key)
+        .ToList();
 }
 
 <style>
-/* ── Drawer overlay ─────────────────────────────────────────────── */
-#txOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1040;opacity:0;transition:opacity .25s;pointer-events:none}
-#txOverlay.open{opacity:1;pointer-events:all}
-
-/* ── Drawer panel ───────────────────────────────────────────────── */
-#txDrawer{
-    position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;
-    background:#fff;z-index:1041;
-    transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);
-    display:flex;flex-direction:column;
-    box-shadow:-6px 0 40px rgba(0,0,0,.16)
+/* ── Transaction drawer (right panel / bottom sheet) ─── */
+#txOverlay {
+    position:fixed; inset:0;
+    background: var(--surface-overlay);
+    backdrop-filter: blur(4px);
+    z-index:400; opacity:0;
+    transition: opacity var(--dur-base);
+    pointer-events:none;
 }
-#txDrawer.open{transform:translateX(0)}
+#txOverlay.open { opacity:1; pointer-events:all; }
 
-/* Mobile: bottom sheet */
-@@media(max-width:600px){
-    #txDrawer{
-        top:auto;left:0;right:0;width:100%;height:92dvh;border-radius:20px 20px 0 0;
-        transform:translateY(110%)
+#txDrawer {
+    position:fixed; top:0; right:0; bottom:0;
+    width: 420px; max-width: 100vw;
+    background: var(--surface-card);
+    border-left: 1px solid var(--border-default);
+    z-index: 401;
+    transform: translateX(110%);
+    transition: transform var(--dur-slow) var(--ease-out);
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow-2xl);
+}
+#txDrawer.open { transform: translateX(0); }
+
+@@media (max-width: 600px) {
+    #txDrawer {
+        top: auto; left: 0; right: 0; width: 100%;
+        height: 92dvh;
+        border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+        border-left: none;
+        border-top: 1px solid var(--border-subtle);
+        transform: translateY(110%);
     }
-    #txDrawer.open{transform:translateY(0)}
+    #txDrawer.open { transform: translateY(0); }
 }
 
-/* ── Drawer internals ───────────────────────────────────────────── */
-.dr-handle{display:none;width:40px;height:4px;border-radius:2px;background:#cbd5e1;margin:10px auto 2px}
-@@media(max-width:600px){.dr-handle{display:block}}
-.dr-head{display:flex;align-items:center;gap:12px;padding:18px 20px 14px;border-bottom:1px solid #f1f5f9}
-.dr-avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}
-.dr-merchant{font-size:17px;font-weight:700;color:#0f172a;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dr-close{width:32px;height:32px;border:none;background:#f1f5f9;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0}
-.dr-close:hover{background:#e2e8f0}
-.dr-body{flex:1;overflow-y:auto;padding:0 20px 20px}
-.dr-amount-block{text-align:center;padding:24px 0 20px;border-bottom:1px solid #f1f5f9}
-.dr-amount{font-size:36px;font-weight:800;letter-spacing:-1px}
-.dr-amount.crc{color:#0f172a}
-.dr-amount.usd{color:#0369a1}
-.dr-datetime{font-size:13px;color:#94a3b8;margin-top:4px}
-.dr-rows{padding:16px 0}
-.dr-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f8fafc}
-.dr-row:last-child{border-bottom:none}
-.dr-row-icon{width:32px;text-align:center;font-size:15px;flex-shrink:0;color:#94a3b8}
-.dr-row-label{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;width:90px;flex-shrink:0}
-.dr-row-val{font-size:13px;font-weight:600;color:#1e293b;flex:1}
-.dr-notes-block{background:#f8fafc;border-radius:10px;padding:12px 14px;margin-top:4px}
-.dr-notes-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:4px}
-.dr-notes-text{font-size:13px;color:#475569;line-height:1.5}
-.dr-foot{padding:14px 20px;border-top:1px solid #f1f5f9;display:flex;gap:8px}
-.dr-foot .btn{flex:1;font-size:13px}
-.dr-ref{font-size:11px;color:#cbd5e1;text-align:center;margin-top:8px}
+/* Drawer internals */
+.dr-handle {
+    display: none; width: 36px; height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--neutral-200);
+    margin: var(--sp-3) auto var(--sp-1);
+}
+@@media (max-width: 600px) { .dr-handle { display: block; } }
 
-/* Clickable rows */
-.tx-row{cursor:pointer}
-.tx-row:hover td{background:#f8fafc}
+.dr-head {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-5) var(--sp-3);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+.dr-avatar {
+    width: 44px; height: 44px; border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, var(--brand-500), #6366f1);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-size: var(--text-xl); font-weight: 700; flex-shrink: 0;
+}
+.dr-merchant {
+    font-size: var(--text-lg); font-weight: 700;
+    color: var(--text-primary); flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dr-close {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-full);
+    background: var(--neutral-100); border: none;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); flex-shrink: 0;
+    transition: background var(--dur-fast);
+}
+.dr-close:hover { background: var(--neutral-200); }
+.dr-body { flex: 1; overflow-y: auto; padding: 0 var(--sp-5) var(--sp-6); overscroll-behavior: contain; }
+.dr-amount-block { text-align: center; padding: var(--sp-6) 0 var(--sp-5); border-bottom: 1px solid var(--border-subtle); }
+.dr-amount { font-size: var(--text-4xl); font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.dr-amount.usd { color: var(--brand-500); }
+.dr-datetime { font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--sp-2); }
+.dr-rows { padding: var(--sp-4) 0; }
+.dr-row {
+    display: flex; align-items: center;
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: var(--sp-3);
+}
+.dr-row:last-child { border-bottom: none; }
+.dr-row-icon { width: 28px; text-align: center; font-size: 16px; flex-shrink: 0; color: var(--text-muted); }
+.dr-row-label {
+    font-size: var(--text-2xs); text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-disabled);
+    font-weight: 700; width: 80px; flex-shrink: 0;
+}
+.dr-row-val { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); flex: 1; }
+.dr-notes-block {
+    background: var(--neutral-50); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl); padding: var(--sp-3) var(--sp-4);
+    margin-top: var(--sp-3);
+}
+.dr-notes-label { font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-disabled); font-weight: 700; margin-bottom: var(--sp-1); }
+.dr-notes-text { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6; }
+.dr-foot {
+    padding: var(--sp-3) var(--sp-5);
+    border-top: 1px solid var(--border-subtle);
+    display: flex; gap: var(--sp-2);
+    flex-shrink: 0;
+}
+.dr-foot .btn { flex: 1; font-size: var(--text-xs); }
+.dr-ref { font-size: var(--text-2xs); color: var(--text-disabled); text-align: center; margin-top: var(--sp-2); }
+
+/* Transaction feed (mobile) */
+.tx-row { cursor: pointer; }
+.hide-mobile { display: none; }
+@@media (min-width: 769px) {
+    .hide-mobile { display: revert; }
+    .show-mobile-only { display: none !important; }
+}
 </style>
 
-<!-- Page Header -->
-<div class="page-header">
-    <div>
-        <div class="page-header-title">💳 Movimientos</div>
-        <div class="page-header-sub">@Model.TotalCount transacción(es) encontrada(s)</div>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="@Url.Action("Export", new { Model.Search, Model.Bank, Model.Currency, Model.MovementType, Model.Status, Model.CategoryId, Model.CardId, Model.StartDate, Model.EndDate })"
-           class="btn btn-secondary btn-sm">📥 Exportar CSV</a>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTxModal">
-            + Nueva Transacción
-        </button>
-    </div>
-</div>
-
-<!-- Stats Row -->
+<!-- ═══════════════════════════════════════════════
+     TOTALS STRIP
+     ═══════════════════════════════════════════════ -->
 @if (Model.TotalCrc > 0 || Model.TotalUsd > 0)
 {
-    <div class="row g-3 mb-3">
-        <div class="col-auto">
-            <div class="kpi-card" style="padding:14px 20px">
-                <div class="kpi-label">Total CRC (filtrado)</div>
-                <div class="kpi-value text-money" style="font-size:20px">₡ @Model.TotalCrc.ToString("N0")</div>
-            </div>
+    <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;padding:var(--sp-3) 0 var(--sp-1)">
+        <div class="kpi" style="flex:1;min-width:140px;padding:var(--sp-3) var(--sp-4)">
+            <div class="kpi__label">Total CRC</div>
+            <div class="kpi__value" style="font-size:var(--text-xl)">₡ @Model.TotalCrc.ToString("N0")</div>
         </div>
         @if (Model.TotalUsd > 0)
         {
-            <div class="col-auto">
-                <div class="kpi-card green" style="padding:14px 20px">
-                    <div class="kpi-label">Total USD (filtrado)</div>
-                    <div class="kpi-value text-money" style="font-size:20px">$ @Model.TotalUsd.ToString("N2")</div>
-                </div>
+            <div class="kpi" style="flex:1;min-width:140px;padding:var(--sp-3) var(--sp-4)">
+                <div class="kpi__label">Total USD</div>
+                <div class="kpi__value" style="font-size:var(--text-xl);color:var(--brand-500)">$ @Model.TotalUsd.ToString("N2")</div>
             </div>
         }
-        <div class="col-auto">
-            <div class="kpi-card purple" style="padding:14px 20px">
-                <div class="kpi-label">Cantidad</div>
-                <div class="kpi-value" style="font-size:20px">@Model.TotalCount</div>
-            </div>
+        <div class="kpi" style="flex:0 0 auto;padding:var(--sp-3) var(--sp-4)">
+            <div class="kpi__label">Cantidad</div>
+            <div class="kpi__value" style="font-size:var(--text-xl)">@Model.TotalCount</div>
         </div>
     </div>
 }
 
-<!-- Filter Bar -->
-<div class="card mb-3">
-    <div class="card-body py-3">
-        <form method="get" action="/transactions" class="row g-2 align-items-end">
-            <div class="col-sm-6 col-lg-3">
-                <label class="form-label">Buscar</label>
-                <input name="search" value="@Model.Search" class="form-control" placeholder="Comercio o descripción..." />
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Banco</label>
-                <select name="bank" class="form-select">
-                    <option value="">Todos</option>
-                    @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
-                    {
-                        <option value="@b" selected="@(Model.Bank == b)">@b</option>
-                    }
-                </select>
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Moneda</label>
-                <select name="currency" class="form-select">
-                    <option value="">Todas</option>
-                    <option value="CRC" selected="@(Model.Currency == "CRC")">CRC</option>
-                    <option value="USD" selected="@(Model.Currency == "USD")">USD</option>
-                </select>
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Tipo</label>
-                <select name="movementType" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="compra" selected="@(Model.MovementType == "compra")">Compra</option>
-                    <option value="servicio" selected="@(Model.MovementType == "servicio")">Servicio</option>
-                    <option value="suscripcion" selected="@(Model.MovementType == "suscripcion")">Suscripción</option>
-                </select>
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Estado</label>
-                <select name="status" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="Aprobada" selected="@(Model.Status == "Aprobada")">Aprobada</option>
-                    <option value="Rechazada" selected="@(Model.Status == "Rechazada")">Rechazada</option>
-                </select>
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Categoría</label>
-                <select name="categoryId" class="form-select">
-                    <option value="">Todas</option>
-                    @foreach (var cat in Model.Categories)
-                    {
-                        <option value="@cat.CategoryId" selected="@(Model.CategoryId == cat.CategoryId)">@cat.IconEmoji @cat.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Tarjeta</label>
-                <select name="cardId" class="form-select">
-                    <option value="">Todas</option>
-                    @foreach (var card in Model.Cards)
-                    {
-                        <option value="@card.CardId" selected="@(Model.CardId == card.CardId)">@card.DisplayName</option>
-                    }
-                </select>
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Desde</label>
-                <input name="startDate" type="date" class="form-control" value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Hasta</label>
-                <input name="endDate" type="date" class="form-control" value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="col-sm-4 col-lg-2">
-                <label class="form-label">Ordenar</label>
-                <select name="sort" class="form-select">
-                    <option value="date_desc" selected="@(Model.Sort == "date_desc")">Más reciente</option>
-                    <option value="date_asc" selected="@(Model.Sort == "date_asc")">Más antiguo</option>
-                    <option value="amount_desc" selected="@(Model.Sort == "amount_desc")">Mayor monto</option>
-                    <option value="amount_asc" selected="@(Model.Sort == "amount_asc")">Menor monto</option>
-                </select>
-            </div>
-            <div class="col-sm-4 col-lg-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary flex-fill">Filtrar</button>
-                <a href="/transactions" class="btn btn-secondary">✕</a>
+<!-- ═══════════════════════════════════════════════
+     FILTER BAR
+     ═══════════════════════════════════════════════ -->
+<details class="card" style="margin:var(--sp-4) 0" id="filterDetails">
+    <summary style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-5);cursor:pointer;list-style:none;gap:var(--sp-3)">
+        <span style="font-size:var(--text-sm);font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:var(--sp-2)">
+            <i data-lucide="filter" style="width:16px;height:16px"></i>
+            Filtros
+            @{
+                var activeFilters = new List<string>();
+                if (!string.IsNullOrEmpty(Model.Search)) activeFilters.Add("Búsqueda");
+                if (!string.IsNullOrEmpty(Model.Bank)) activeFilters.Add(Model.Bank);
+                if (!string.IsNullOrEmpty(Model.Currency)) activeFilters.Add(Model.Currency);
+                if (!string.IsNullOrEmpty(Model.MovementType)) activeFilters.Add(Model.MovementType);
+                if (!string.IsNullOrEmpty(Model.Status)) activeFilters.Add(Model.Status);
+                if (Model.CategoryId.HasValue) activeFilters.Add("Categoría");
+                if (Model.CardId.HasValue) activeFilters.Add("Tarjeta");
+                if (Model.StartDate.HasValue || Model.EndDate.HasValue) activeFilters.Add("Fechas");
+            }
+            @if (activeFilters.Any())
+            {
+                <span class="badge badge--brand">@activeFilters.Count activo(s)</span>
+            }
+        </span>
+        <div style="display:flex;align-items:center;gap:var(--sp-3)">
+            @if (activeFilters.Any())
+            {
+                <a href="/transactions" style="font-size:var(--text-xs);color:var(--danger-600);font-weight:600">Limpiar</a>
+            }
+            <i data-lucide="chevron-down" style="width:16px;height:16px;color:var(--text-disabled);transition:transform var(--dur-base)" id="filterChevron"></i>
+        </div>
+    </summary>
+    <div style="padding:var(--sp-3) var(--sp-5) var(--sp-5);border-top:1px solid var(--border-subtle)">
+        <form method="get" action="/transactions">
+            <div class="row g-3">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="field">
+                        <label class="field__label">Buscar</label>
+                        <input name="search" value="@Model.Search" class="input" placeholder="Comercio o descripción..." />
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-2">
+                    <div class="field">
+                        <label class="field__label">Banco</label>
+                        <select name="bank" class="select">
+                            <option value="">Todos</option>
+                            @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
+                            {
+                                <option value="@b" @(Model.Bank == b ? "selected" : "")>@b</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-2">
+                    <div class="field">
+                        <label class="field__label">Moneda</label>
+                        <select name="currency" class="select">
+                            <option value="">Todas</option>
+                            <option value="CRC" @(Model.Currency == "CRC" ? "selected" : "")>CRC</option>
+                            <option value="USD" @(Model.Currency == "USD" ? "selected" : "")>USD</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-2">
+                    <div class="field">
+                        <label class="field__label">Tipo</label>
+                        <select name="movementType" class="select">
+                            <option value="">Todos</option>
+                            <option value="compra" @(Model.MovementType == "compra" ? "selected" : "")>Compra</option>
+                            <option value="servicio" @(Model.MovementType == "servicio" ? "selected" : "")>Servicio</option>
+                            <option value="suscripcion" @(Model.MovementType == "suscripcion" ? "selected" : "")>Suscripción</option>
+                            <option value="retiro_cajero" @(Model.MovementType == "retiro_cajero" ? "selected" : "")>Retiro ATM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-2">
+                    <div class="field">
+                        <label class="field__label">Estado</label>
+                        <select name="status" class="select">
+                            <option value="">Todos</option>
+                            <option value="Aprobada" @(Model.Status == "Aprobada" ? "selected" : "")>Aprobada</option>
+                            <option value="Rechazada" @(Model.Status == "Rechazada" ? "selected" : "")>Rechazada</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="field">
+                        <label class="field__label">Categoría</label>
+                        <select name="categoryId" class="select">
+                            <option value="">Todas</option>
+                            @foreach (var cat in Model.Categories)
+                            {
+                                <option value="@cat.CategoryId" @(Model.CategoryId == cat.CategoryId ? "selected" : "")>@cat.IconEmoji @cat.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="field">
+                        <label class="field__label">Tarjeta</label>
+                        <select name="cardId" class="select">
+                            <option value="">Todas</option>
+                            @foreach (var card in Model.Cards)
+                            {
+                                <option value="@card.CardId" @(Model.CardId == card.CardId ? "selected" : "")>@card.DisplayName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-2">
+                    <div class="field">
+                        <label class="field__label">Desde</label>
+                        <input name="startDate" type="date" class="input" value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-2">
+                    <div class="field">
+                        <label class="field__label">Hasta</label>
+                        <input name="endDate" type="date" class="input" value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-2">
+                    <div class="field">
+                        <label class="field__label">Ordenar</label>
+                        <select name="sort" class="select">
+                            <option value="date_desc" @(Model.Sort == "date_desc" ? "selected" : "")>Más reciente</option>
+                            <option value="date_asc" @(Model.Sort == "date_asc" ? "selected" : "")>Más antiguo</option>
+                            <option value="amount_desc" @(Model.Sort == "amount_desc" ? "selected" : "")>Mayor monto</option>
+                            <option value="amount_asc" @(Model.Sort == "amount_asc" ? "selected" : "")>Menor monto</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn--primary">Aplicar filtros</button>
+                    <a href="/transactions" class="btn btn--ghost">Limpiar</a>
+                    <a href="@Url.Action("Export", new { Model.Search, Model.Bank, Model.Currency, Model.MovementType, Model.Status, Model.CategoryId, Model.CardId, Model.StartDate, Model.EndDate })"
+                       class="btn btn--ghost" style="margin-left:auto">
+                        <i data-lucide="download" style="width:14px;height:14px"></i> CSV
+                    </a>
+                </div>
             </div>
         </form>
     </div>
+</details>
+
+<!-- ═══════════════════════════════════════════════
+     ACTION BAR
+     ═══════════════════════════════════════════════ -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3)">
+    <span style="font-size:var(--text-xs);color:var(--text-muted);font-weight:500">
+        @Model.TotalCount movimiento(s)
+        @if (Model.TotalPages > 1){ <text>· Pág. @Model.Page/@Model.TotalPages</text> }
+    </span>
+    <button class="btn btn--primary btn--sm" onclick="openAddModal()">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Agregar
+    </button>
 </div>
 
-<!-- Transactions Table -->
-<div class="card">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Comercio</th>
-                        <th>Banco</th>
-                        <th>Monto</th>
-                        <th>Tipo</th>
-                        <th>Estado</th>
-                        <th>Categoría</th>
-                        <th>Tarjeta</th>
-                        <th style="width:60px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Transactions.Any())
+<!-- ═══════════════════════════════════════════════
+     TRANSACTION LIST
+     ═══════════════════════════════════════════════ -->
+@if (Model.Transactions.Any())
+{
+    <!-- Feed view (mobile) / grouped -->
+    <div class="show-mobile-only">
+        <div class="tx-feed">
+            @foreach (var group in grouped)
+            {
+                var groupTotal = group.Sum(t => t.Amount);
+                var groupCurrency = group.Select(t => t.Currency).Distinct().Count() == 1 ? group.First().Currency : "mixed";
+                <div class="tx-group">
+                    <div class="tx-group__header">
+                        <span class="tx-group__date">@group.Key.ToString("dddd d 'de' MMMM", new System.Globalization.CultureInfo("es-CR"))</span>
+                        @if (groupCurrency != "mixed")
+                        {
+                            <span class="tx-group__sum">@(groupCurrency == "CRC" ? "₡" : "$") @groupTotal.ToString("N0")</span>
+                        }
+                    </div>
+                    @foreach (var tx in group)
                     {
+                        <div class="tx-item tx-row @(tx.Status == "Rechazada" ? "tx-item--pending" : "")" data-tx-id="@tx.TransactionId">
+                            <div class="tx-item__merchant">@(tx.Merchant?.Length > 0 ? tx.Merchant[0].ToString().ToUpper() : "?")</div>
+                            <div class="tx-item__info">
+                                <div class="tx-item__name">@tx.Merchant</div>
+                                <div class="tx-item__meta">
+                                    @tx.Bank
+                                    @if (tx.Category != null)
+                                    {
+                                        <span class="tx-item__chip">@tx.Category.IconEmoji @tx.Category.Name</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="tx-item__right">
+                                <div class="tx-item__amount @(tx.Currency == "USD" ? "" : "")">
+                                    @(tx.Currency == "CRC" ? "₡" : "$") @tx.Amount.ToString("N2")
+                                </div>
+                                @if (tx.Status == "Rechazada")
+                                {
+                                    <div style="font-size:var(--text-2xs);color:var(--danger-600);font-weight:600;margin-top:2px">Rechazada</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Table view (desktop) -->
+    <div class="hide-mobile">
+        <div class="card">
+            <div class="card__body" style="padding:0;overflow-x:auto">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Fecha</th>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Comercio</th>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Banco</th>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Monto</th>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Tipo</th>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Estado</th>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Categoría</th>
+                            <th style="font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">Tarjeta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         @foreach (var tx in Model.Transactions)
                         {
-                            <tr class="tx-row" data-tx-id="@tx.TransactionId">
-                                <td style="font-size:12px;color:#64748b;white-space:nowrap">
+                            <tr class="tx-row" data-tx-id="@tx.TransactionId" style="cursor:pointer">
+                                <td style="font-size:var(--text-xs);color:var(--text-muted);white-space:nowrap;padding:var(--sp-3) var(--sp-4)">
                                     @tx.TransactionDate.ToString("dd/MM/yyyy")
                                 </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="merchant-avatar">@(tx.Merchant.Length > 0 ? tx.Merchant[0].ToString().ToUpper() : "?")</div>
+                                <td style="padding:var(--sp-3) var(--sp-4)">
+                                    <div style="display:flex;align-items:center;gap:var(--sp-2)">
+                                        <div style="width:32px;height:32px;border-radius:var(--radius-lg);background:var(--neutral-100);display:flex;align-items:center;justify-content:center;font-size:var(--text-sm);font-weight:700;color:var(--text-secondary);flex-shrink:0">
+                                            @(tx.Merchant?.Length > 0 ? tx.Merchant[0].ToString().ToUpper() : "?")
+                                        </div>
                                         <div>
-                                            <div style="font-size:13px;font-weight:600">@tx.Merchant</div>
+                                            <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary)">@tx.Merchant</div>
                                             @if (!string.IsNullOrEmpty(tx.Notes))
                                             {
-                                                <div style="font-size:11px;color:#94a3b8">@tx.Notes</div>
+                                                <div style="font-size:var(--text-xs);color:var(--text-muted)">@tx.Notes</div>
                                             }
                                         </div>
                                     </div>
                                 </td>
-                                <td style="font-size:12.5px">@tx.Bank</td>
-                                <td style="font-size:13px;font-weight:600;font-family:monospace;color:@(tx.Currency == "USD" ? "#0369a1" : "#0f172a")">
+                                <td style="font-size:var(--text-xs);color:var(--text-secondary);padding:var(--sp-3) var(--sp-4)">@tx.Bank</td>
+                                <td style="font-size:var(--text-sm);font-weight:700;font-variant-numeric:tabular-nums;padding:var(--sp-3) var(--sp-4);color:@(tx.Currency == "USD" ? "var(--brand-500)" : "var(--text-primary)")">
                                     @(tx.Currency == "CRC" ? "₡" : "$") @tx.Amount.ToString("N0")
-                                    <div style="font-size:10px;font-weight:400;color:#94a3b8">
-                                        <span class="@(tx.Currency == "CRC" ? "badge-crc" : "badge-usd") badge-cat">@tx.Currency</span>
-                                    </div>
                                 </td>
-                                <td>
-                                    @if (tx.MovementType == "compra")
-                                    {
-                                        <span title="Compra">🛒</span>
+                                <td style="font-size:var(--text-xs);padding:var(--sp-3) var(--sp-4)">
+                                    @{
+                                        var typeLabel = tx.MovementType switch {
+                                            "compra" => "🛒 Compra",
+                                            "servicio" => "🔧 Servicio",
+                                            "suscripcion" => "🔄 Suscripción",
+                                            "retiro_cajero" => "🏧 Retiro ATM",
+                                            _ => tx.MovementType
+                                        };
                                     }
-                                    else if (tx.MovementType == "retiro_cajero")
-                                    {
-                                        <span title="Retiro ATM">🏧</span>
-                                    }
-                                    else
-                                    {
-                                        <span title="@tx.MovementType">🔄</span>
-                                    }
-                                    <div style="font-size:10px;color:#94a3b8">@(tx.Origin == "manual" ? "manual" : "auto")</div>
+                                    <span style="color:var(--text-muted)">@typeLabel</span>
                                 </td>
-                                <td>
+                                <td style="padding:var(--sp-3) var(--sp-4)">
                                     @if (tx.Status == "Aprobada")
                                     {
-                                        <span class="badge-status-aprobada">✓ Aprobada</span>
+                                        <span class="badge badge--success">✓ Aprobada</span>
                                     }
                                     else
                                     {
-                                        <span class="badge-status-rechazada">✗ @tx.Status</span>
+                                        <span class="badge badge--danger">✗ @tx.Status</span>
                                     }
                                 </td>
-                                <td>
+                                <td style="padding:var(--sp-3) var(--sp-4)">
                                     @if (tx.Category != null)
                                     {
-                                        <span class="badge-cat" style="background:@(tx.Category.Color)22;color:@tx.Category.Color;border:1px solid @(tx.Category.Color)44">
+                                        <span class="badge" style="background:@(tx.Category.Color)22;color:@tx.Category.Color;border:1px solid @(tx.Category.Color)33">
                                             @tx.Category.IconEmoji @tx.Category.Name
                                         </span>
                                     }
                                     else
                                     {
-                                        <button class="btn btn-sm btn-secondary assign-cat-btn"
+                                        <button class="btn btn--ghost btn--sm assign-cat-btn"
                                                 data-tx-id="@tx.TransactionId"
-                                                style="font-size:11px;padding:2px 8px">
+                                                onclick="event.stopPropagation()">
                                             + Categoría
                                         </button>
                                     }
                                 </td>
-                                <td style="font-size:12px;color:#64748b">@(tx.Card?.DisplayName ?? "—")</td>
-                                <td onclick="event.stopPropagation()">
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-secondary" title="Editar"
-                                                onclick="drawerEdit(@tx.TransactionId)">
-                                            ✏️
-                                        </button>
-                                        <form method="post" action="/transactions/delete/@tx.TransactionId"
-                                              onsubmit="return confirm('¿Eliminar esta transacción?')">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-danger">🗑</button>
-                                        </form>
-                                    </div>
+                                <td style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--sp-3) var(--sp-4)">
+                                    @(tx.Card?.DisplayName ?? "—")
                                 </td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="9" class="text-center py-5">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon">💳</div>
-                                    <div class="empty-state-text">No se encontraron transacciones</div>
-                                    <div style="font-size:12px;margin-top:6px;color:#94a3b8">Ajusta los filtros o agrega una nueva transacción</div>
-                                    <button class="btn btn-primary btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#addTxModal">+ Nueva Transacción</button>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (Model.TotalPages > 1)
+            {
+                <div style="padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-3)">
+                    <span style="font-size:var(--text-xs);color:var(--text-muted)">Página @Model.Page de @Model.TotalPages · @Model.TotalCount registros</span>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            @if (Model.Page > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=@(Model.Page-1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">‹</a>
+                                </li>
+                            }
+                            @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
+                            {
+                                <li class="page-item @(i == Model.Page ? "active" : "")">
+                                    <a class="page-link" href="?page=@i&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">@i</a>
+                                </li>
+                            }
+                            @if (Model.Page < Model.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=@(Model.Page+1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">›</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+            }
         </div>
     </div>
 
-    <!-- Pagination -->
+    <!-- Mobile pagination -->
     @if (Model.TotalPages > 1)
     {
-        <div class="card-body border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <span style="font-size:13px;color:#64748b">
-                Página @Model.Page de @Model.TotalPages (@Model.TotalCount registros)
-            </span>
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    @if (Model.Page > 1)
-                    {
-                        <li class="page-item">
-                            <a class="page-link" href="?page=@(Model.Page-1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">‹</a>
-                        </li>
-                    }
-                    @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
-                    {
-                        <li class="page-item @(i == Model.Page ? "active" : "")">
-                            <a class="page-link" href="?page=@i&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">@i</a>
-                        </li>
-                    }
-                    @if (Model.Page < Model.TotalPages)
-                    {
-                        <li class="page-item">
-                            <a class="page-link" href="?page=@(Model.Page+1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">›</a>
-                        </li>
-                    }
-                </ul>
-            </nav>
+        <div class="show-mobile-only" style="display:flex;justify-content:center;gap:var(--sp-2);margin-top:var(--sp-4);padding-bottom:var(--sp-4)">
+            @if (Model.Page > 1)
+            {
+                <a class="btn btn--ghost btn--sm" href="?page=@(Model.Page-1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort">‹ Anterior</a>
+            }
+            <span style="font-size:var(--text-xs);color:var(--text-muted);display:flex;align-items:center;padding:0 var(--sp-2)">@Model.Page / @Model.TotalPages</span>
+            @if (Model.Page < Model.TotalPages)
+            {
+                <a class="btn btn--ghost btn--sm" href="?page=@(Model.Page+1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort">Siguiente ›</a>
+            }
         </div>
     }
-</div>
+}
+else
+{
+    <div class="empty">
+        <div class="empty__icon">💳</div>
+        <div class="empty__title">Sin movimientos</div>
+        <div class="empty__text">No hay transacciones con los filtros actuales.</div>
+        <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-4)">
+            <button class="btn btn--primary" onclick="openAddModal()">Registrar movimiento</button>
+            <a href="/transactions" class="btn btn--ghost">Limpiar filtros</a>
+        </div>
+    </div>
+}
 
-<!-- ── Transaction Drawer ──────────────────────────────────────────────────── -->
+<!-- ═══════════════════════════════════════════════
+     TRANSACTION DRAWER
+     ═══════════════════════════════════════════════ -->
 <div id="txOverlay" onclick="closeDrawer()"></div>
-<div id="txDrawer">
+<div id="txDrawer" role="dialog" aria-modal="true" aria-labelledby="drMerchant">
     <div class="dr-handle"></div>
     <div class="dr-head">
         <div class="dr-avatar" id="drAvatar"></div>
         <div class="dr-merchant" id="drMerchant"></div>
-        <button class="dr-close" onclick="closeDrawer()" title="Cerrar">✕</button>
+        <button class="dr-close" onclick="closeDrawer()" aria-label="Cerrar"><i data-lucide="x"></i></button>
     </div>
     <div class="dr-body">
         <div class="dr-amount-block">
@@ -385,32 +550,32 @@
         </div>
         <div class="dr-rows">
             <div class="dr-row">
-                <div class="dr-row-icon">🏦</div>
+                <div class="dr-row-icon"><i data-lucide="landmark" style="width:16px;height:16px"></i></div>
                 <div class="dr-row-label">Banco</div>
                 <div class="dr-row-val" id="drBank"></div>
             </div>
             <div class="dr-row">
-                <div class="dr-row-icon">💳</div>
+                <div class="dr-row-icon"><i data-lucide="credit-card" style="width:16px;height:16px"></i></div>
                 <div class="dr-row-label">Tarjeta</div>
                 <div class="dr-row-val" id="drCard"></div>
             </div>
             <div class="dr-row">
-                <div class="dr-row-icon">🏷️</div>
+                <div class="dr-row-icon"><i data-lucide="tag" style="width:16px;height:16px"></i></div>
                 <div class="dr-row-label">Categoría</div>
                 <div class="dr-row-val" id="drCategory"></div>
             </div>
             <div class="dr-row">
-                <div class="dr-row-icon">⚡</div>
+                <div class="dr-row-icon"><i data-lucide="check-circle" style="width:16px;height:16px"></i></div>
                 <div class="dr-row-label">Estado</div>
                 <div class="dr-row-val" id="drStatus"></div>
             </div>
             <div class="dr-row">
-                <div class="dr-row-icon">🔄</div>
+                <div class="dr-row-icon"><i data-lucide="repeat-2" style="width:16px;height:16px"></i></div>
                 <div class="dr-row-label">Tipo</div>
                 <div class="dr-row-val" id="drType"></div>
             </div>
             <div class="dr-row">
-                <div class="dr-row-icon">📡</div>
+                <div class="dr-row-icon"><i data-lucide="radio" style="width:16px;height:16px"></i></div>
                 <div class="dr-row-label">Origen</div>
                 <div class="dr-row-val" id="drOrigin"></div>
             </div>
@@ -422,18 +587,26 @@
         <div class="dr-ref" id="drRef"></div>
     </div>
     <div class="dr-foot">
-        <button class="btn btn-outline-primary" id="drEditBtn" onclick="drawerEditCurrent()">✏️ Editar</button>
-        <button class="btn btn-outline-secondary" id="drDupBtn">📋 Duplicar</button>
-        <button class="btn btn-outline-danger" id="drDelBtn">🗑 Eliminar</button>
+        <button class="btn btn--ghost btn--sm" id="drEditBtn" onclick="drawerEditCurrent()">
+            <i data-lucide="pencil" style="width:13px;height:13px"></i> Editar
+        </button>
+        <button class="btn btn--ghost btn--sm" id="drDupBtn">
+            <i data-lucide="copy" style="width:13px;height:13px"></i> Duplicar
+        </button>
+        <button class="btn btn--danger btn--sm" id="drDelBtn">
+            <i data-lucide="trash-2" style="width:13px;height:13px"></i> Eliminar
+        </button>
     </div>
 </div>
 
-<!-- Add Transaction Modal -->
+<!-- ═══════════════════════════════════════════════
+     ADD TRANSACTION MODAL
+     ═══════════════════════════════════════════════ -->
 <div class="modal fade" id="addTxModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">➕ Nueva Transacción</h5>
+                <h5 class="modal-title">Nuevo movimiento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="/transactions/add">
@@ -493,6 +666,7 @@
                                 <option value="compra">Compra</option>
                                 <option value="servicio">Servicio</option>
                                 <option value="suscripcion">Suscripción</option>
+                                <option value="retiro_cajero">Retiro ATM</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -513,19 +687,21 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar transacción</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Assign Category Modal -->
+<!-- ═══════════════════════════════════════════════
+     ASSIGN CATEGORY MODAL
+     ═══════════════════════════════════════════════ -->
 <div class="modal fade" id="assignCatModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">🏷️ Asignar categoría</h5>
+                <h5 class="modal-title">Asignar categoría</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -535,7 +711,7 @@
                     {
                         <button class="btn btn-secondary text-start d-flex align-items-center gap-2 cat-select-btn"
                                 data-cat-id="@cat.CategoryId">
-                            <span style="width:10px;height:10px;border-radius:50%;background:@cat.Color;display:inline-block"></span>
+                            <span style="width:10px;height:10px;border-radius:50%;background:@cat.Color;display:inline-block;flex-shrink:0"></span>
                             @cat.IconEmoji @cat.Name
                         </button>
                     }
@@ -545,12 +721,14 @@
     </div>
 </div>
 
-<!-- Edit Transaction Modal -->
+<!-- ═══════════════════════════════════════════════
+     EDIT TRANSACTION MODAL
+     ═══════════════════════════════════════════════ -->
 <div class="modal fade" id="editTxModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">✏️ Editar Transacción</h5>
+                <h5 class="modal-title">Editar movimiento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" id="editTxForm">
@@ -608,6 +786,7 @@
                                 <option value="compra">Compra</option>
                                 <option value="servicio">Servicio</option>
                                 <option value="suscripcion">Suscripción</option>
+                                <option value="retiro_cajero">Retiro ATM</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -637,49 +816,49 @@
 
 @section Scripts {
 <script>
-    // ── Transaction Drawer ──────────────────────────────────────────
+    // ── TX Data ────────────────────────────────────────────────
     const TX_MAP = @Html.Raw(txMapJson);
     let currentTxId = null;
-
     const typeLabels = { compra:'Compra', servicio:'Servicio', suscripcion:'Suscripción', retiro_cajero:'Retiro ATM' };
 
+    function openAddModal() {
+        new bootstrap.Modal(document.getElementById('addTxModal')).show();
+    }
+
+    // ── Drawer ────────────────────────────────────────────────
     function openDrawer(txId) {
         const t = TX_MAP[txId];
         if (!t) return;
         currentTxId = txId;
 
-        // Header
         document.getElementById('drAvatar').textContent   = t.merchant.charAt(0).toUpperCase();
         document.getElementById('drMerchant').textContent = t.merchant;
 
-        // Amount
         const amtEl = document.getElementById('drAmount');
-        amtEl.textContent = (t.currency === 'CRC' ? '₡ ' : '$ ') + parseFloat(t.amount).toLocaleString('es-CR', {minimumFractionDigits: 0});
-        amtEl.className = 'dr-amount ' + (t.currency === 'USD' ? 'usd' : 'crc');
+        amtEl.textContent = (t.currency === 'CRC' ? '₡ ' : '$ ') +
+            parseFloat(t.amount).toLocaleString('es-CR', {minimumFractionDigits: 0});
+        amtEl.className = 'dr-amount ' + (t.currency === 'USD' ? 'usd' : '');
 
-        // Date + time (hide 00:00 time for date-only records)
         const timeStr = t.time && t.time !== '00:00' ? ' · ' + t.time : '';
         const [y,m,d] = t.date.split('-');
         document.getElementById('drDatetime').textContent = `${d}/${m}/${y}${timeStr}`;
 
-        // Info rows
         document.getElementById('drBank').textContent = t.bank || '—';
         document.getElementById('drCard').textContent = t.cardName || '—';
 
         const catEl = document.getElementById('drCategory');
         catEl.innerHTML = t.catName
             ? `<span style="background:${t.catColor}22;color:${t.catColor};border:1px solid ${t.catColor}44;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">${t.catIcon} ${t.catName}</span>`
-            : '<span style="color:#94a3b8">Sin categoría</span>';
+            : '<span style="color:var(--text-muted)">Sin categoría</span>';
 
         const statusEl = document.getElementById('drStatus');
         statusEl.innerHTML = t.status === 'Aprobada'
-            ? '<span style="background:#dcfce7;color:#16a34a;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">✓ Aprobada</span>'
-            : '<span style="background:#fee2e2;color:#dc2626;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">✗ ' + t.status + '</span>';
+            ? '<span style="background:var(--success-50);color:var(--success-700);padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--success-100)">✓ Aprobada</span>'
+            : '<span style="background:var(--danger-50);color:var(--danger-700);padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--danger-100)">✗ ' + t.status + '</span>';
 
         document.getElementById('drType').textContent   = typeLabels[t.movementType] || t.movementType;
         document.getElementById('drOrigin').textContent = t.origin === 'manual' ? '✍️ Manual' : '🤖 Importado';
 
-        // Notes / description
         const notesBlock = document.getElementById('drNotesBlock');
         const combined = [t.description, t.notes].filter(Boolean).join('\n');
         if (combined) {
@@ -689,21 +868,19 @@
         } else {
             notesBlock.style.display = 'none';
         }
-
         document.getElementById('drRef').textContent = t.reference;
 
-        // Wire action buttons
         const csrf = document.querySelector('input[name="__RequestVerificationToken"]').value;
         document.getElementById('drDupBtn').onclick = () => submitForm(`/transactions/duplicate/${txId}`, csrf);
         document.getElementById('drDelBtn').onclick = () => {
-            if (confirm(`¿Eliminar la transacción de ${t.merchant}?`))
+            if (confirm(`¿Eliminar el movimiento de ${t.merchant}?`))
                 submitForm(`/transactions/delete/${txId}`, csrf);
         };
 
-        // Open
         document.getElementById('txOverlay').classList.add('open');
         document.getElementById('txDrawer').classList.add('open');
         document.body.style.overflow = 'hidden';
+        lucide.createIcons();
     }
 
     function closeDrawer() {
@@ -727,73 +904,79 @@
         f.method = 'post'; f.action = action;
         const tok = document.createElement('input');
         tok.type = 'hidden'; tok.name = '__RequestVerificationToken'; tok.value = csrf;
-        f.appendChild(tok);
-        document.body.appendChild(f);
-        f.submit();
+        f.appendChild(tok); document.body.appendChild(f); f.submit();
     }
 
     // Row click → open drawer
     document.querySelectorAll('.tx-row').forEach(row => {
-        row.addEventListener('click', () => openDrawer(parseInt(row.dataset.txId)));
+        row.addEventListener('click', e => {
+            if (e.target.closest('.assign-cat-btn, form, button')) return;
+            openDrawer(parseInt(row.dataset.txId));
+        });
     });
 
-    // Escape key closes drawer
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
     function sel(id, val) {
-        var el = document.getElementById(id);
-        for (var o of el.options) o.selected = (o.value == val || (val === null && o.value === ''));
+        const el = document.getElementById(id);
+        if (!el) return;
+        for (const o of el.options) o.selected = (o.value == val || (val === null && o.value === ''));
     }
 
     function openEditTx(txId, bank, merchant, amount, currency, date, status, movementType, cardId, categoryId, notes) {
         document.getElementById('editTxForm').action = '/transactions/edit/' + txId;
-        document.getElementById('etMerchant').value = merchant;
-        document.getElementById('etAmount').value   = amount;
-        document.getElementById('etDate').value     = date;
-        document.getElementById('etNotes').value    = notes;
-        sel('etBank', bank);
-        sel('etCurrency', currency);
-        sel('etStatus', status);
-        sel('etMovementType', movementType);
-        sel('etCard', cardId);
-        sel('etCategory', categoryId);
+        document.getElementById('etMerchant').value  = merchant;
+        document.getElementById('etAmount').value    = amount;
+        document.getElementById('etDate').value      = date;
+        document.getElementById('etNotes').value     = notes;
+        sel('etBank', bank); sel('etCurrency', currency);
+        sel('etStatus', status); sel('etMovementType', movementType);
+        sel('etCard', cardId); sel('etCategory', categoryId);
         new bootstrap.Modal(document.getElementById('editTxModal')).show();
     }
 
     // Auto-fill bank from card selection
-    document.getElementById('txCard').addEventListener('change', function() {
-        var selected = this.options[this.selectedIndex];
-        var bank = selected.dataset.bank;
-        if (bank) {
-            var bankSelect = document.getElementById('txBank');
-            for (var i = 0; i < bankSelect.options.length; i++) {
-                if (bankSelect.options[i].value === bank) {
-                    bankSelect.selectedIndex = i;
-                    break;
-                }
-            }
-        }
-    });
+    const txCardEl = document.getElementById('txCard');
+    if (txCardEl) {
+        txCardEl.addEventListener('change', function() {
+            const bank = this.options[this.selectedIndex].dataset.bank;
+            if (!bank) return;
+            const bankSel = document.getElementById('txBank');
+            for (const o of bankSel.options) if (o.value === bank) { bankSel.value = bank; break; }
+        });
+    }
 
     // Assign category
-    document.querySelectorAll('.assign-cat-btn').forEach(function(btn) {
+    document.querySelectorAll('.assign-cat-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.getElementById('assignTxId').value = this.dataset.txId;
             new bootstrap.Modal(document.getElementById('assignCatModal')).show();
         });
     });
 
-    document.querySelectorAll('.cat-select-btn').forEach(function(btn) {
+    document.querySelectorAll('.cat-select-btn').forEach(btn => {
         btn.addEventListener('click', async function() {
-            var txId = document.getElementById('assignTxId').value;
-            var catId = this.dataset.catId;
-            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-            var resp = await fetch('/transactions/assign-category?transactionId=' + txId + '&categoryId=' + catId, {
-                method: 'POST',
-                headers: { 'RequestVerificationToken': token }
+            const txId = document.getElementById('assignTxId').value;
+            const catId = this.dataset.catId;
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const resp = await fetch(`/transactions/assign-category?transactionId=${txId}&categoryId=${catId}`, {
+                method: 'POST', headers: { 'RequestVerificationToken': token }
             });
-            if (resp.ok) { location.reload(); }
+            if (resp.ok) location.reload();
         });
     });
+
+    // Filter chevron toggle animation
+    const filterDetails = document.getElementById('filterDetails');
+    const filterChevron = document.getElementById('filterChevron');
+    if (filterDetails && filterChevron) {
+        filterDetails.addEventListener('toggle', () => {
+            filterChevron.style.transform = filterDetails.open ? 'rotate(180deg)' : '';
+        });
+        // Auto-open if filters are active
+        if (@Html.Raw(activeFilters.Any().ToString().ToLower())) {
+            filterDetails.setAttribute('open', '');
+        }
+    }
 </script>
 }

@@ -3,13 +3,13 @@
 <html lang="es">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="antiforgery-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
     <title>@(ViewData["Title"] != null ? ViewData["Title"] + " — PurchaseTracker" : "PurchaseTracker")</title>
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1e40af" />
+    <meta name="theme-color" content="#2563eb" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -21,6 +21,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
@@ -34,179 +35,246 @@
             .Select(w => char.ToUpper(w[0]))
     );
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+    var isAdmin = User.IsInRole("admin");
 
     <!-- Sidebar overlay (mobile) -->
-    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="PT.closeSidebar()"></div>
 
-    <!-- SIDEBAR -->
-    <nav id="sidebar">
+    <!-- ═══════════════════════════════════════════════════════
+         SIDEBAR
+         ═══════════════════════════════════════════════════════ -->
+    <nav class="sidebar" id="sidebar">
+
         <div class="sidebar-brand">
-            <a href="/" class="brand-logo">
-                <div class="brand-icon">PT</div>
-                <div class="brand-text">
-                    <span class="brand-name">PurchaseTracker</span>
-                    <span class="brand-tagline">Control financiero</span>
-                </div>
-            </a>
+            <div class="sidebar-brand__icon">P</div>
+            <div>
+                <div class="sidebar-brand__name">PurchaseTracker</div>
+                <div class="sidebar-brand__sub">Control financiero</div>
+            </div>
         </div>
 
         <div class="sidebar-nav">
 
-        @if (User.IsInRole("admin"))
+        @if (isAdmin)
         {
-            <!-- ADMINISTRADOR: solo ve su sección -->
-            <div class="nav-section-label">Sistema</div>
-            <ul class="nav flex-column nav-section">
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Admin" ? "active" : "")" href="/admin">
-                        <span class="nav-icon">🛡️</span>
-                        <span class="nav-text">Usuarios</span>
-                    </a>
-                </li>
-            </ul>
+            <div class="sidebar-section">
+                <div class="sidebar-section__label">Sistema</div>
+                <a class="sidebar-item @(currentController == "Admin" ? "active" : "")" href="/admin">
+                    <span class="sidebar-item__icon"><i data-lucide="shield"></i></span>
+                    <span class="sidebar-item__text">Usuarios</span>
+                </a>
+            </div>
         }
         else
         {
-            <!-- USUARIO NORMAL: ve todas las secciones -->
+            <div class="sidebar-section">
+                <div class="sidebar-section__label">Principal</div>
+                <a class="sidebar-item @(currentController == "Dashboard" ? "active" : "")" href="/">
+                    <span class="sidebar-item__icon"><i data-lucide="layout-dashboard"></i></span>
+                    <span class="sidebar-item__text">Inicio</span>
+                </a>
+            </div>
 
-            <!-- PRINCIPAL -->
-            <div class="nav-section-label">Principal</div>
-            <ul class="nav flex-column nav-section">
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Dashboard" ? "active" : "")" href="/">
-                        <span class="nav-icon">📊</span>
-                        <span class="nav-text">Dashboard</span>
-                    </a>
-                </li>
-            </ul>
+            <div class="sidebar-section">
+                <div class="sidebar-section__label">Finanzas</div>
+                <a class="sidebar-item @(currentController == "Transactions" ? "active" : "")" href="/transactions">
+                    <span class="sidebar-item__icon"><i data-lucide="arrow-left-right"></i></span>
+                    <span class="sidebar-item__text">Movimientos</span>
+                </a>
+                <a class="sidebar-item @(currentController == "Cards" ? "active" : "")" href="/cards">
+                    <span class="sidebar-item__icon"><i data-lucide="credit-card"></i></span>
+                    <span class="sidebar-item__text">Tarjetas</span>
+                </a>
+                <a class="sidebar-item @(currentController == "Financing" ? "active" : "")" href="/financing">
+                    <span class="sidebar-item__icon"><i data-lucide="landmark"></i></span>
+                    <span class="sidebar-item__text">Financiamientos</span>
+                </a>
+                <a class="sidebar-item @(currentController == "Notes" ? "active" : "")" href="/notes">
+                    <span class="sidebar-item__icon"><i data-lucide="notebook-pen"></i></span>
+                    <span class="sidebar-item__text">Notas</span>
+                </a>
+                <a class="sidebar-item @(currentController == "Subscriptions" ? "active" : "")" href="/subscriptions">
+                    <span class="sidebar-item__icon"><i data-lucide="repeat-2"></i></span>
+                    <span class="sidebar-item__text">Suscripciones</span>
+                </a>
+            </div>
 
-            <!-- FINANZAS -->
+            <div class="sidebar-section">
+                <div class="sidebar-section__label">Análisis</div>
+                <a class="sidebar-item @(currentController == "ExchangeRate" ? "active" : "")" href="/exchange">
+                    <span class="sidebar-item__icon"><i data-lucide="trending-up"></i></span>
+                    <span class="sidebar-item__text">Tipo de Cambio</span>
+                </a>
+                <a class="sidebar-item @(currentController == "Reports" ? "active" : "")" href="/reports">
+                    <span class="sidebar-item__icon"><i data-lucide="bar-chart-2"></i></span>
+                    <span class="sidebar-item__text">Reportes</span>
+                </a>
+            </div>
 
-            <div class="nav-section-label">Finanzas</div>
-            <ul class="nav flex-column nav-section">
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Transactions" ? "active" : "")" href="/transactions">
-                        <span class="nav-icon">💳</span>
-                        <span class="nav-text">Movimientos</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Cards" ? "active" : "")" href="/cards">
-                        <span class="nav-icon">🏦</span>
-                        <span class="nav-text">Tarjetas</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Financing" ? "active" : "")" href="/financing">
-                        <span class="nav-icon">📋</span>
-                        <span class="nav-text">Financiamientos</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Notes" ? "active" : "")" href="/notes">
-                        <span class="nav-icon">📝</span>
-                        <span class="nav-text">Notas</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Subscriptions" ? "active" : "")" href="/subscriptions">
-                        <span class="nav-icon">🔄</span>
-                        <span class="nav-text">Suscripciones</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- ANÁLISIS -->
-            <div class="nav-section-label">Análisis</div>
-            <ul class="nav flex-column nav-section">
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "ExchangeRate" ? "active" : "")" href="/exchange">
-                        <span class="nav-icon">💱</span>
-                        <span class="nav-text">Tipo de Cambio</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Reports" ? "active" : "")" href="/reports">
-                        <span class="nav-icon">📄</span>
-                        <span class="nav-text">Reportes</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- CUENTA -->
-            <div class="nav-section-label">Cuenta</div>
-            <ul class="nav flex-column nav-section">
-                <li class="nav-item">
-                    <a class="nav-link @(currentController == "Settings" ? "active" : "")" href="/settings">
-                        <span class="nav-icon">⚙️</span>
-                        <span class="nav-text">Configuración</span>
-                    </a>
-                </li>
-            </ul>
+            <div class="sidebar-section">
+                <div class="sidebar-section__label">Cuenta</div>
+                <a class="sidebar-item @(currentController == "Settings" ? "active" : "")" href="/settings">
+                    <span class="sidebar-item__icon"><i data-lucide="settings"></i></span>
+                    <span class="sidebar-item__text">Configuración</span>
+                </a>
+            </div>
         }
 
         </div>
 
         <div class="sidebar-footer">
             <div class="sidebar-user">
-                <div class="user-avatar">@initials</div>
-                <div class="user-info">
-                    <div class="user-name">@User.Identity?.Name</div>
-                    <div class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</div>
+                <div class="sidebar-user__avatar">@initials</div>
+                <div class="sidebar-user__info">
+                    <div class="sidebar-user__name">@User.Identity?.Name</div>
+                    <div class="sidebar-user__email">@userEmail</div>
                 </div>
             </div>
-            <form method="post" action="/auth/logout">
+            <form method="post" action="/auth/logout" style="margin-top:var(--sp-2)">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn-logout">
-                    <span>🚪</span> Cerrar sesión
+                <button type="submit" class="sidebar-item" style="width:100%;border:none;background:none;color:var(--danger-600)">
+                    <span class="sidebar-item__icon"><i data-lucide="log-out"></i></span>
+                    <span class="sidebar-item__text">Cerrar sesión</span>
                 </button>
             </form>
         </div>
     </nav>
 
-    <!-- MAIN CONTENT -->
-    <div id="main-content">
-        <!-- Top Bar -->
-        <div class="topbar">
-            <div class="d-flex align-items-center gap-3">
-                <button class="sidebar-toggle hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-                <span class="topbar-title">@(ViewData["Title"] ?? "Dashboard")</span>
+    <!-- ═══════════════════════════════════════════════════════
+         MAIN
+         ═══════════════════════════════════════════════════════ -->
+    <div class="main" id="main-content">
+
+        <!-- Page header -->
+        <header class="page-header">
+            <div style="display:flex;align-items:center;gap:var(--sp-3)">
+                <button class="sidebar-toggle btn btn--icon" id="sidebar-toggle" aria-label="Menú" onclick="PT.toggleSidebar()">
+                    <i data-lucide="menu"></i>
+                </button>
+                <span class="page-header__title">@(ViewData["Title"] ?? "Inicio")</span>
             </div>
-            <div class="topbar-actions">
-                @if (User.Identity?.IsAuthenticated == true && !User.IsInRole("admin"))
+            <div class="page-header__actions">
+                @if (!isAdmin)
                 {
                     @await Component.InvokeAsync("ExchangeRate")
                 }
-                <div class="topbar-user">
-                    <div class="user-avatar" style="width:28px;height:28px;font-size:11px">@initials</div>
-                    <span class="topbar-user-name d-none d-sm-inline">@User.Identity?.Name</span>
+                <div style="display:flex;align-items:center;gap:var(--sp-2)">
+                    <div class="sidebar-user__avatar" style="width:32px;height:32px;font-size:var(--text-xs)">@initials</div>
                 </div>
             </div>
-        </div>
+        </header>
 
         <!-- Flash messages -->
         @if (TempData["Success"] != null)
         {
-            <div class="flash-messages">
-                <div class="alert alert-success alert-dismissible" role="alert">
-                    ✅ @TempData["Success"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
+            <div class="flash flash--success animate-fade-in" role="status">
+                <i data-lucide="check-circle"></i>
+                <span>@TempData["Success"]</span>
+                <button class="flash__close" onclick="this.closest('.flash').remove()" aria-label="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
         }
         @if (TempData["Error"] != null)
         {
-            <div class="flash-messages">
-                <div class="alert alert-danger alert-dismissible" role="alert">
-                    ❌ @TempData["Error"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
+            <div class="flash flash--error animate-fade-in" role="alert">
+                <i data-lucide="alert-circle"></i>
+                <span>@TempData["Error"]</span>
+                <button class="flash__close" onclick="this.closest('.flash').remove()" aria-label="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
         }
 
-        <!-- Page content -->
+        <!-- Page body -->
         <div class="page-content">
             @RenderBody()
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         BOTTOM NAV (mobile)
+         ═══════════════════════════════════════════════════════ -->
+    @if (!isAdmin)
+    {
+        <nav class="bottom-nav" aria-label="Navegación principal">
+            <div class="bottom-nav__inner">
+                <a class="bottom-nav__item" href="/" data-href="/">
+                    <span class="bottom-nav__icon"><i data-lucide="layout-dashboard"></i></span>
+                    <span class="bottom-nav__label">Inicio</span>
+                </a>
+                <a class="bottom-nav__item" href="/transactions" data-href="/transactions">
+                    <span class="bottom-nav__icon"><i data-lucide="arrow-left-right"></i></span>
+                    <span class="bottom-nav__label">Movimientos</span>
+                </a>
+
+                <!-- Center FAB -->
+                <div class="bottom-nav__item" style="pointer-events:none">
+                    <button class="bottom-nav__fab" id="fab-add" aria-label="Agregar movimiento"
+                            data-sheet="quick-add-sheet" style="pointer-events:all">
+                        <i data-lucide="plus"></i>
+                    </button>
+                </div>
+
+                <a class="bottom-nav__item" href="/cards" data-href="/cards">
+                    <span class="bottom-nav__icon"><i data-lucide="credit-card"></i></span>
+                    <span class="bottom-nav__label">Tarjetas</span>
+                </a>
+                <a class="bottom-nav__item" href="/settings" data-href="/settings">
+                    <span class="bottom-nav__icon"><i data-lucide="settings"></i></span>
+                    <span class="bottom-nav__label">Ajustes</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- ═══════════════════════════════════════════════════
+             QUICK-ADD BOTTOM SHEET
+             ═══════════════════════════════════════════════════ -->
+        <div class="sheet-backdrop" id="quick-add-sheet-backdrop"></div>
+        <div class="sheet" id="quick-add-sheet" role="dialog" aria-modal="true" aria-labelledby="quick-add-title">
+            <div class="sheet__handle"></div>
+            <div class="sheet__header">
+                <span class="sheet__title" id="quick-add-title">Nuevo movimiento</span>
+                <button class="sheet__close" data-sheet-close aria-label="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="sheet__body">
+                <a href="/transactions/create" class="sheet-action-row">
+                    <span class="sheet-action-row__icon" style="background:var(--brand-50);color:var(--brand-500)">
+                        <i data-lucide="plus-circle"></i>
+                    </span>
+                    <div class="sheet-action-row__info">
+                        <div class="sheet-action-row__title">Registrar manualmente</div>
+                        <div class="sheet-action-row__sub">Ingresa todos los datos del movimiento</div>
+                    </div>
+                    <i data-lucide="chevron-right" class="sheet-action-row__chevron"></i>
+                </a>
+                <a href="/transactions/import" class="sheet-action-row">
+                    <span class="sheet-action-row__icon" style="background:var(--success-50);color:var(--success-600)">
+                        <i data-lucide="upload"></i>
+                    </span>
+                    <div class="sheet-action-row__info">
+                        <div class="sheet-action-row__title">Importar desde archivo</div>
+                        <div class="sheet-action-row__sub">Carga un CSV o Excel del banco</div>
+                    </div>
+                    <i data-lucide="chevron-right" class="sheet-action-row__chevron"></i>
+                </a>
+            </div>
+        </div>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════
+         PWA INSTALL PROMPT
+         ═══════════════════════════════════════════════════════ -->
+    <div class="install-prompt" id="install-prompt" role="dialog" aria-modal="true">
+        <div class="install-prompt__icon">💳</div>
+        <div class="install-prompt__title">Instalar PurchaseTracker</div>
+        <div class="install-prompt__sub">Agrega la app a tu pantalla de inicio para acceso rápido sin conexión.</div>
+        <div class="install-prompt__actions">
+            <button class="btn btn--primary btn--sm" data-install-trigger>Instalar ahora</button>
+            <button class="btn btn--ghost btn--sm" data-install-dismiss>Ahora no</button>
         </div>
     </div>
 }
@@ -217,38 +285,30 @@ else
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="~/js/app.js" asp-append-version="true"></script>
 
 <script>
-    function toggleSidebar() {
+    // ── Sidebar toggle ────────────────────────────────────────
+    PT.toggleSidebar = function() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebar-overlay');
         sidebar.classList.toggle('open');
-        overlay.classList.toggle('show');
-    }
+        overlay?.classList.toggle('show');
+    };
+    PT.closeSidebar = function() {
+        document.getElementById('sidebar')?.classList.remove('open');
+        document.getElementById('sidebar-overlay')?.classList.remove('show');
+    };
 
-    function closeSidebar() {
-        document.getElementById('sidebar').classList.remove('open');
-        document.getElementById('sidebar-overlay').classList.remove('show');
-    }
-
-    // Auto-dismiss flash messages after 5s
-    setTimeout(() => {
-        document.querySelectorAll('.flash-messages .alert').forEach(el => {
-            const bsAlert = bootstrap.Alert.getOrCreateInstance(el);
-            bsAlert.close();
+    // Close sidebar on any nav click (mobile)
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+        el.addEventListener('click', () => {
+            if (window.innerWidth < 768) PT.closeSidebar();
         });
-    }, 5000);
-
-    // ── Service Worker registration ──────────────────────────────────────────
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('[SW] Registered, scope:', reg.scope))
-                .catch(err => console.warn('[SW] Registration failed:', err));
-        });
-    }
+    });
 </script>
 
 @await RenderSectionAsync("Scripts", required: false)
+<script>lucide.createIcons();</script>
 </body>
 </html>

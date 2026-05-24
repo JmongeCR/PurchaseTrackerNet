@@ -6,29 +6,23 @@
     if (!string.IsNullOrEmpty(requestTab)) activeTab = requestTab;
 }
 
-<div class="page-header">
-    <div>
-        <div class="page-header-title">🏦 Tarjetas</div>
-        <div class="page-header-sub">@Model.Cards.Count tarjeta(s) registrada(s)</div>
-    </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCardModal">
-        + Nueva Tarjeta
+<!-- Action bar -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3)">
+    <span style="font-size:var(--text-xs);color:var(--text-muted)">@Model.Cards.Count tarjeta(s) registrada(s)</span>
+    <button class="btn btn--primary btn--sm" data-bs-toggle="modal" data-bs-target="#addCardModal">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Nueva Tarjeta
     </button>
 </div>
 
 <!-- Tabs -->
-<ul class="nav nav-tabs mb-4">
-    <li class="nav-item">
-        <a class="nav-link @(activeTab != "ciclo" ? "active" : "")" href="?tab=tarjetas">
-            🏦 Mis Tarjetas
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(activeTab == "ciclo" ? "active" : "")" href="?tab=ciclo">
-            📅 Ciclo de Crédito
-        </a>
-    </li>
-</ul>
+<div style="display:flex;gap:var(--sp-1);background:var(--neutral-100);border-radius:var(--radius-xl);padding:var(--sp-1);margin-bottom:var(--sp-5);width:fit-content">
+    <a href="?tab=tarjetas" style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4);border-radius:var(--radius-lg);font-size:var(--text-sm);font-weight:600;text-decoration:none;transition:all var(--dur-base);@(activeTab != "ciclo" ? "background:var(--surface-card);color:var(--text-primary);box-shadow:var(--shadow-sm)" : "color:var(--text-muted)")">
+        <i data-lucide="credit-card" style="width:15px;height:15px"></i> Mis Tarjetas
+    </a>
+    <a href="?tab=ciclo" style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4);border-radius:var(--radius-lg);font-size:var(--text-sm);font-weight:600;text-decoration:none;transition:all var(--dur-base);@(activeTab == "ciclo" ? "background:var(--surface-card);color:var(--text-primary);box-shadow:var(--shadow-sm)" : "color:var(--text-muted)")">
+        <i data-lucide="calendar" style="width:15px;height:15px"></i> Ciclo de Crédito
+    </a>
+</div>
 
 @if (activeTab == "ciclo")
 {
@@ -39,24 +33,24 @@
     <!-- ── Ciclo de Crédito: KPI Summary ──────────────────────────────── -->
     <div class="row g-3 mb-4">
         <div class="col-sm-4">
-            <div class="kpi-card" style="border-left:4px solid #ef4444">
-                <div class="kpi-label">💳 Por pagar (ciclo cerrado)</div>
-                <div class="kpi-value" style="color:#ef4444">₡ @Model.TotalToPayCrc.ToString("N2")</div>
-                <div class="kpi-sub">Monto ya facturado pendiente de pago</div>
+            <div class="kpi">
+                <div class="kpi__label">Por pagar (ciclo cerrado)</div>
+                <div class="kpi__value" style="color:var(--danger-600)">₡ @Model.TotalToPayCrc.ToString("N2")</div>
+                <div class="kpi__sub">Monto ya facturado pendiente de pago</div>
             </div>
         </div>
         <div class="col-sm-4">
-            <div class="kpi-card" style="border-left:4px solid #3b82f6">
-                <div class="kpi-label">📈 Ciclo abierto</div>
-                <div class="kpi-value" style="color:#3b82f6">₡ @Model.TotalOpenCycleCrc.ToString("N2")</div>
-                <div class="kpi-sub">Acumulado en el ciclo actual (aún sin corte)</div>
+            <div class="kpi">
+                <div class="kpi__label">Ciclo abierto</div>
+                <div class="kpi__value" style="color:var(--brand-500)">₡ @Model.TotalOpenCycleCrc.ToString("N2")</div>
+                <div class="kpi__sub">Acumulado en el ciclo actual (aún sin corte)</div>
             </div>
         </div>
         <div class="col-sm-4">
-            <div class="kpi-card" style="border-left:4px solid #8b5cf6">
-                <div class="kpi-label">🏦 Tarjetas activas con ciclo</div>
-                <div class="kpi-value" style="color:#8b5cf6">@Model.ActiveCreditCardsWithCycle</div>
-                <div class="kpi-sub">Tarjetas de crédito con día de corte configurado</div>
+            <div class="kpi">
+                <div class="kpi__label">Tarjetas activas con ciclo</div>
+                <div class="kpi__value">@Model.ActiveCreditCardsWithCycle</div>
+                <div class="kpi__sub">Tarjetas de crédito con día de corte configurado</div>
             </div>
         </div>
     </div>
@@ -94,7 +88,7 @@
                     : cs.Card.CardAlias + (cs.Card.Last4 != null ? $" ···· {cs.Card.Last4}" : "");
 
                 <div class="col-lg-6">
-                    <div class="card shadow-sm" style="border:none;border-radius:16px;overflow:hidden">
+                    <div class="card" style="overflow:hidden">
 
                         <!-- Gradient header -->
                         <div style="@gradientStyle;padding:20px 24px 18px;color:#fff;position:relative">
@@ -129,77 +123,77 @@
                         </div>
 
                         <!-- Date blocks -->
-                        <div class="row g-0" style="border-bottom:1px solid #f1f5f9">
-                            <div class="col-4 text-center" style="padding:14px 8px;border-right:1px solid #f1f5f9">
-                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:4px">Último corte</div>
-                                <div style="font-size:15px;font-weight:700;color:#0f172a">
+                        <div class="row g-0" style="border-bottom:1px solid var(--border)">
+                            <div class="col-4 text-center" style="padding:14px 8px;border-right:1px solid var(--border)">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:4px">Último corte</div>
+                                <div style="font-size:15px;font-weight:700;color:var(--text-primary)">
                                     @(cs.LastCutDate?.ToString("dd/MM") ?? "—")
                                 </div>
-                                <div style="font-size:10px;color:#94a3b8">@(cs.LastCutDate?.ToString("yyyy") ?? "")</div>
+                                <div style="font-size:10px;color:var(--text-muted)">@(cs.LastCutDate?.ToString("yyyy") ?? "")</div>
                             </div>
-                            <div class="col-4 text-center" style="padding:14px 8px;border-right:1px solid #f1f5f9">
-                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:4px">Fecha de pago</div>
+                            <div class="col-4 text-center" style="padding:14px 8px;border-right:1px solid var(--border)">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:4px">Fecha de pago</div>
                                 @if (cs.PaymentDueDate.HasValue)
                                 {
                                     var today2 = DateTime.UtcNow.Date;
                                     var overdue = cs.PaymentDueDate.Value.Date < today2;
-                                    var dueColor = overdue ? "#ef4444" : "#0f172a";
+                                    var dueColor = overdue ? "#F87171" : "#FAFAFA";
                                     <div style="font-size:15px;font-weight:700;color:@dueColor">
                                         @cs.PaymentDueDate.Value.ToString("dd/MM")
                                     </div>
-                                    <div style="font-size:10px;color:#94a3b8">@cs.PaymentDueDate.Value.ToString("yyyy")</div>
+                                    <div style="font-size:10px;color:var(--text-muted)">@cs.PaymentDueDate.Value.ToString("yyyy")</div>
                                     @if (overdue)
                                     {
-                                        <div style="font-size:10px;color:#ef4444;font-weight:600">vencido</div>
+                                        <div style="font-size:10px;color:#F87171;font-weight:600">vencido</div>
                                     }
                                 }
                                 else
                                 {
-                                    <div style="font-size:15px;font-weight:700;color:#94a3b8">—</div>
-                                    <div style="font-size:10px;color:#cbd5e1">sin configurar</div>
+                                    <div style="font-size:15px;font-weight:700;color:var(--text-muted)">—</div>
+                                    <div style="font-size:10px;color:var(--text-muted)">sin configurar</div>
                                 }
                             </div>
                             <div class="col-4 text-center" style="padding:14px 8px">
-                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:4px">Próximo corte</div>
-                                <div style="font-size:15px;font-weight:700;color:#0f172a">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:4px">Próximo corte</div>
+                                <div style="font-size:15px;font-weight:700;color:var(--text-primary)">
                                     @(cs.NextCutDate?.ToString("dd/MM") ?? "—")
                                 </div>
-                                <div style="font-size:10px;color:#94a3b8">@(cs.NextCutDate?.ToString("yyyy") ?? "")</div>
+                                <div style="font-size:10px;color:var(--text-muted)">@(cs.NextCutDate?.ToString("yyyy") ?? "")</div>
                             </div>
                         </div>
 
                         <!-- Financial blocks: closed cycle + open cycle -->
                         <div class="row g-0">
-                            <div class="col-6" style="padding:16px 20px;border-right:1px solid #f1f5f9;background:#fff9f9">
-                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#dc2626;margin-bottom:6px">
+                            <div class="col-6" style="padding:16px 20px;border-right:1px solid var(--border);background:rgba(239,68,68,0.06)">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#F87171;margin-bottom:6px">
                                     💳 Por pagar
                                 </div>
-                                <div style="font-size:22px;font-weight:800;color:#dc2626;line-height:1.1">
+                                <div style="font-size:22px;font-weight:800;color:#F87171;line-height:1.1">
                                     ₡ @cs.LastCycleSpending.ToString("N2")
                                 </div>
-                                <div style="font-size:11px;color:#94a3b8;margin-top:4px">
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
                                     Ciclo cerrado · @cs.LastCycleTxCount mov.
                                 </div>
                                 @if (cs.PrevCutDate.HasValue && cs.LastCutDate.HasValue)
                                 {
-                                    <div style="font-size:10px;color:#cbd5e1;margin-top:2px">
+                                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px">
                                         @cs.PrevCutDate.Value.ToString("dd/MM") → @cs.LastCutDate.Value.ToString("dd/MM")
                                     </div>
                                 }
                             </div>
-                            <div class="col-6" style="padding:16px 20px;background:#f0f9ff">
-                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#2563eb;margin-bottom:6px">
+                            <div class="col-6" style="padding:16px 20px;background:rgba(99,102,241,0.06)">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#818CF8;margin-bottom:6px">
                                     📈 Ciclo abierto
                                 </div>
-                                <div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1.1">
+                                <div style="font-size:22px;font-weight:800;color:#818CF8;line-height:1.1">
                                     ₡ @cs.OpenCycleSpending.ToString("N2")
                                 </div>
-                                <div style="font-size:11px;color:#94a3b8;margin-top:4px">
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
                                     Acumulando · @cs.OpenCycleTxCount mov.
                                 </div>
                                 @if (cs.LastCutDate.HasValue)
                                 {
-                                    <div style="font-size:10px;color:#cbd5e1;margin-top:2px">
+                                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px">
                                         @cs.LastCutDate.Value.ToString("dd/MM") → hoy
                                     </div>
                                 }
@@ -213,17 +207,11 @@
     }
     else
     {
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📅</div>
-                    <div class="empty-state-text">No hay tarjetas de crédito con día de corte configurado</div>
-                    <p style="font-size:13px;color:#94a3b8;margin-top:8px">
-                        Agrega una tarjeta de crédito con día de corte y días de pago para ver sus ciclos aquí.
-                    </p>
-                    <a href="?tab=tarjetas" class="btn btn-outline-primary mt-2">🏦 Ver mis tarjetas</a>
-                </div>
-            </div>
+        <div class="empty">
+            <div class="empty__icon">📅</div>
+            <div class="empty__title">Sin tarjetas de crédito con ciclo</div>
+            <div class="empty__text">Agrega una tarjeta de crédito con día de corte y días de pago.</div>
+            <a href="?tab=tarjetas" class="btn btn--ghost btn--sm" style="margin-top:var(--sp-3)">Ver mis tarjetas</a>
         </div>
     }
 }
@@ -285,7 +273,7 @@ else
 .bc2-menu{position:absolute;top:10px;right:10px;z-index:30}
 .bc2-dot{width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;background:rgba(0,0,0,.28);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;line-height:1;padding:0;transition:background .18s}
 .bc2-dot:hover{background:rgba(0,0,0,.48)}
-.bc2-dd{border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:4px 0;min-width:152px}
+.bc2-dd{border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.6);padding:4px 0;min-width:152px;background:var(--bg-elevated)}
 .bc2-dd .dropdown-item{font-size:13px;padding:8px 16px;border-radius:6px;margin:1px 4px;width:calc(100% - 8px)}
 </style>
 
@@ -479,15 +467,11 @@ else
     }
     else
     {
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <div class="empty-state">
-                    <div class="empty-state-icon">🏦</div>
-                    <div class="empty-state-text">No hay tarjetas registradas</div>
-                    <p style="font-size:13px;color:#94a3b8;margin-top:8px">Agrega tus tarjetas para llevar mejor control de gastos</p>
-                    <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addCardModal">+ Agregar tarjeta</button>
-                </div>
-            </div>
+        <div class="empty">
+            <div class="empty__icon">🏦</div>
+            <div class="empty__title">Sin tarjetas registradas</div>
+            <div class="empty__text">Agrega tus tarjetas para llevar mejor control de gastos.</div>
+            <button class="btn btn--primary btn--sm" style="margin-top:var(--sp-3)" data-bs-toggle="modal" data-bs-target="#addCardModal">Agregar tarjeta</button>
         </div>
     }
 }
@@ -550,8 +534,8 @@ else
                         </div>
                         <!-- Campos solo para crédito -->
                         <div class="col-12" id="addCreditFields">
-                            <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
-                                <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
+                            <div class="p-3 rounded" style="background:var(--bg-elevated);border:1px solid var(--border)">
+                                <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
                                     Solo tarjeta de crédito
                                 </div>
                                 <div class="row g-3">
@@ -641,8 +625,8 @@ else
                         </div>
                         <!-- Campos solo para crédito -->
                         <div class="col-12" id="editCreditFields">
-                            <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
-                                <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
+                            <div class="p-3 rounded" style="background:var(--bg-elevated);border:1px solid var(--border)">
+                                <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
                                     Solo tarjeta de crédito
                                 </div>
                                 <div class="row g-3">

@@ -1,12 +1,13 @@
 {
   "name": "PurchaseTracker",
-  "short_name": "PT",
-  "description": "Control financiero personal — tarjetas, movimientos y tipo de cambio",
+  "short_name": "Purchase",
+  "description": "Control financiero personal — tarjetas, movimientos y tipo de cambio en Costa Rica",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0f172a",
-  "theme_color": "#1e40af",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#070c18",
+  "theme_color": "#2563eb",
   "lang": "es",
   "scope": "/",
   "icons": [
@@ -25,25 +26,27 @@
   ],
   "shortcuts": [
     {
-      "name": "Movimientos",
+      "name": "Agregar movimiento",
+      "short_name": "Agregar",
+      "description": "Registrar un nuevo gasto rápidamente",
+      "url": "/transactions/create",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mis movimientos",
       "short_name": "Movimientos",
-      "description": "Ver movimientos recientes",
+      "description": "Ver historial de movimientos",
       "url": "/transactions",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Tarjetas",
+      "name": "Mis tarjetas",
       "short_name": "Tarjetas",
-      "description": "Mis tarjetas",
+      "description": "Gestionar tarjetas de crédito y débito",
       "url": "/cards",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Tipo de Cambio",
-      "short_name": "Cambio",
-      "description": "Tipo de cambio USD/CRC",
-      "url": "/exchange",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "categories": ["finance", "productivity"],
+  "prefer_related_applications": false
 }
