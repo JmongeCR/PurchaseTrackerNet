@@ -1,0 +1,605 @@
+@model FinancingListViewModel
+@{
+    ViewData["Title"] = "Financiamientos";
+
+    string TypeLabel(string t) => t switch
+    {
+        "tasa_0" => "Tasa 0%",
+        "minicuotas" => "Minicuotas",
+        "cuotas_normales" => "Cuotas normales",
+        _ => "Manual"
+    };
+    string TypeColor(string t) => t switch
+    {
+        "tasa_0" => "#dcfce7;color:#16a34a",
+        "minicuotas" => "#fef3c7;color:#d97706",
+        "cuotas_normales" => "#dbeafe;color:#2563eb",
+        _ => "#f1f5f9;color:#64748b"
+    };
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-header-title">💳 Financiamientos</div>
+        <div class="page-header-sub">Control de cuotas y planes de pago</div>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFinancingModal">
+        + Nuevo financiamiento
+    </button>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <!-- Activos -->
+    <div class="col-6 col-xl">
+        <div class="kpi-card purple">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-label">Activos</div>
+            <div class="kpi-value">@Model.ActiveCount</div>
+            <div class="kpi-sub">En curso</div>
+        </div>
+    </div>
+    <!-- CRC cuota -->
+    <div class="col-6 col-xl">
+        <div class="kpi-card orange">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-label">Cuota mensual CRC</div>
+            <div class="kpi-value text-money" style="font-size:1.2rem">₡ @Model.TotalMonthlyCommitment.ToString("N2")</div>
+            <div class="kpi-sub">Compromiso mensual</div>
+        </div>
+    </div>
+    <!-- CRC pendiente -->
+    <div class="col-6 col-xl">
+        <div class="kpi-card red">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-label">Pendiente CRC</div>
+            <div class="kpi-value text-money" style="font-size:1.2rem">₡ @Model.TotalPendingAmount.ToString("N2")</div>
+            <div class="kpi-sub">Saldo por pagar</div>
+        </div>
+    </div>
+    <!-- USD cuota -->
+    <div class="col-6 col-xl">
+        <div class="kpi-card green">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-label">Cuota mensual USD</div>
+            <div class="kpi-value text-money" style="font-size:1.2rem">$ @Model.TotalMonthlyCommitmentUsd.ToString("N2")</div>
+            <div class="kpi-sub">Compromiso mensual</div>
+        </div>
+    </div>
+    <!-- USD pendiente -->
+    <div class="col-6 col-xl">
+        <div class="kpi-card" style="border-left:3px solid #0369a1">
+            <div class="kpi-icon" style="color:#0369a1">💵</div>
+            <div class="kpi-label">Pendiente USD</div>
+            <div class="kpi-value text-money" style="font-size:1.2rem;color:#dc2626">$ @Model.TotalPendingAmountUsd.ToString("N2")</div>
+            <div class="kpi-sub">Saldo por pagar</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3" id="financingTabs">
+    <li class="nav-item">
+        <a class="nav-link @(Model.Tab == "activos" ? "active" : "")" href="/financing?tab=activos">
+            Activos <span class="badge bg-primary ms-1">@Model.Activos.Count</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.Tab == "pagados" ? "active" : "")" href="/financing?tab=pagados">
+            Pagados <span class="badge bg-success ms-1">@Model.Pagados.Count</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.Tab == "cancelados" ? "active" : "")" href="/financing?tab=cancelados">
+            Cancelados <span class="badge bg-secondary ms-1">@Model.Cancelados.Count</span>
+        </a>
+    </li>
+</ul>
+
+@{
+    var displayed = Model.Tab switch
+    {
+        "pagados" => Model.Pagados,
+        "cancelados" => Model.Cancelados,
+        _ => Model.Activos
+    };
+}
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (!displayed.Any())
+        {
+            <div class="empty-state py-5">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-title">Sin financiamientos @Model.Tab</div>
+                <div class="empty-state-text">
+                    @if (Model.Tab == "activos")
+                    {
+                        <span>Haz clic en <strong>+ Nuevo financiamiento</strong> para agregar uno.</span>
+                    }
+                    else
+                    {
+                        <span>No hay financiamientos en este estado.</span>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Comercio / Banco</th>
+                            <th>Tipo</th>
+                            <th>Cuota mensual</th>
+                            <th>Cuotas</th>
+                            <th>Próximo pago</th>
+                            <th>Pendiente</th>
+                            <th style="text-align:right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in displayed)
+                        {
+                            var style = TypeColor(f.FinancingType);
+                            // Pre-compute safe values for data attributes (no JS quoting issues)
+                            var fPurchaseDateStr  = f.PurchaseDate.ToString("yyyy-MM-dd");
+                            var fStartDateStr     = f.StartDate.ToString("yyyy-MM-dd");
+                            var fTotalStr         = f.TotalAmount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+                            var fMonthlyStr       = f.MonthlyPayment.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+                            var fCardIdStr        = f.CardId?.ToString() ?? "";
+                            var fNotesAttr        = (f.Notes ?? "").Replace("\r", "").Replace("\n", " ");
+                            <tr>
+                                <td>
+                                    <div style="font-weight:600;font-size:14px">@f.Merchant</div>
+                                    <div style="font-size:11px;color:#94a3b8">
+                                        @f.Bank
+                                        @if (f.Card != null)
+                                        {
+                                            <span>— @f.Card.DisplayName</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="background:@style;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">
+                                        @TypeLabel(f.FinancingType)
+                                    </span>
+                                </td>
+                                <td class="text-money" style="font-size:13px;font-weight:600">
+                                    @(f.Currency == "USD" ? "$" : "₡") @f.MonthlyPayment.ToString("N2")
+                                </td>
+                                <td>
+                                    <div style="font-size:13px">
+                                        <strong>@f.PaidInstallments</strong>
+                                        <span style="color:#94a3b8">/ @f.Months</span>
+                                    </div>
+                                    @if (f.Status == "activo")
+                                    {
+                                        <div style="font-size:11px;color:#64748b">@f.RemainingInstallments por pagar</div>
+                                    }
+                                </td>
+                                <td style="font-size:12px;color:#475569">
+                                    @if (f.NextPaymentDate.HasValue)
+                                    {
+                                        var daysLeft = (f.NextPaymentDate.Value.Date - DateTime.UtcNow.Date).Days;
+                                        <div>@f.NextPaymentDate.Value.ToString("dd/MM/yyyy")</div>
+                                        <div style="font-size:11px;color:@(daysLeft <= 7 ? "#dc2626" : "#94a3b8")">
+                                            @(daysLeft <= 0 ? "Vencida" : $"en {daysLeft} días")
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#94a3b8">—</span>
+                                    }
+                                </td>
+                                <td class="text-money" style="font-size:13px;font-weight:600;color:@(f.PendingAmount > 0 ? "#dc2626" : "#16a34a")">
+                                    @if (f.PendingAmount > 0)
+                                    {
+                                        <span>@(f.Currency == "USD" ? "$" : "₡") @f.PendingAmount.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>✅ Pagado</span>
+                                    }
+                                </td>
+                                <td style="text-align:right">
+                                    <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                        @if (f.Status == "activo")
+                                        {
+                                            <!-- Pagar cuota -->
+                                            <form method="post" action="/financing/pay/@f.FinancingId" style="display:inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-success" title="Registrar pago de cuota"
+                                                        onclick="return confirm('¿Registrar pago de cuota para @f.Merchant?')">
+                                                    💳 Pagar cuota
+                                                </button>
+                                            </form>
+
+                                            <!-- Reducir cuota (solo si hay cuotas pagadas) -->
+                                            @if (f.PaidInstallments > 0)
+                                            {
+                                                <form method="post" action="/financing/reduce/@f.FinancingId" style="display:inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Reducir 1 cuota pagada (deshacer)"
+                                                            onclick="return confirm('¿Reducir cuota pagada de @f.Merchant? Pasará de @f.PaidInstallments a @(f.PaidInstallments - 1) cuotas pagadas.')">
+                                                        ➖
+                                                    </button>
+                                                </form>
+                                            }
+
+                                            <!-- Editar: usa data-* attributes para evitar problemas de codificación -->
+                                            <button class="btn btn-sm btn-secondary" title="Editar financiamiento"
+                                                    data-id="@f.FinancingId"
+                                                    data-merchant="@f.Merchant"
+                                                    data-bank="@f.Bank"
+                                                    data-total="@fTotalStr"
+                                                    data-currency="@f.Currency"
+                                                    data-purchase-date="@fPurchaseDateStr"
+                                                    data-type="@f.FinancingType"
+                                                    data-months="@f.Months"
+                                                    data-monthly="@fMonthlyStr"
+                                                    data-start-date="@fStartDateStr"
+                                                    data-card-id="@fCardIdStr"
+                                                    data-notes="@fNotesAttr"
+                                                    data-paid="@f.PaidInstallments"
+                                                    onclick="openEditModal(this)">
+                                                ✏️
+                                            </button>
+
+                                            <!-- Cancelar -->
+                                            <form method="post" action="/financing/cancel/@f.FinancingId" style="display:inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-warning" title="Cancelar financiamiento"
+                                                        onclick="return confirm('¿Cancelar el financiamiento de @f.Merchant?')">
+                                                    ⏹
+                                                </button>
+                                            </form>
+                                        }
+
+                                        <!-- Eliminar -->
+                                        <form method="post" action="/financing/delete/@f.FinancingId" style="display:inline"
+                                              onsubmit="return confirm('¿Eliminar el financiamiento de @f.Merchant?')">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">🗑</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ── Modal: Add Financing ──────────────────────────────────────────────────── -->
+<div class="modal fade" id="addFinancingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">➕ Nuevo financiamiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/financing/add">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Comercio *</label>
+                            <input name="Merchant" class="form-control" placeholder="ej. Samsung, Kolbi" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Banco *</label>
+                            <input name="Bank" class="form-control" placeholder="ej. BAC, BCR" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Monto total *</label>
+                            <input id="addTotalAmount" name="TotalAmount" type="number" step="0.01" min="0.01"
+                                   class="form-control" placeholder="0.00" required
+                                   oninput="calcMonthly('add')" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Moneda</label>
+                            <select name="Currency" class="form-select">
+                                <option value="CRC">CRC (₡)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha de compra *</label>
+                            <input name="PurchaseDate" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de financiamiento</label>
+                            <select name="FinancingType" class="form-select" onchange="toggleRateFields(this,'add')">
+                                <option value="cuotas_normales">Cuotas normales</option>
+                                <option value="tasa_0">Tasa 0%</option>
+                                <option value="minicuotas">Minicuotas</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Meses / cuotas *</label>
+                            <input id="addMonths" name="Months" type="number" min="1" max="120"
+                                   class="form-control" placeholder="12" required
+                                   oninput="calcMonthly('add')" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label d-flex align-items-center gap-1">
+                                Cuota mensual *
+                                <span id="addAutoTag" style="display:none;font-size:10px;background:#dbeafe;color:#2563eb;padding:1px 6px;border-radius:10px;font-weight:600">auto</span>
+                            </label>
+                            <input id="addMonthlyPayment" name="MonthlyPayment" type="number" step="0.01" min="0"
+                                   class="form-control" placeholder="0.00" required
+                                   oninput="clearAutoTag('add')" />
+                            <div id="addMonthlyHint" style="font-size:11px;color:#94a3b8;margin-top:3px"></div>
+                        </div>
+                        <div id="addRateFields">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tasa de interés (% mensual)</label>
+                                    <input name="InterestRate" type="number" step="0.0001" min="0" class="form-control" placeholder="ej. 1.75" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Comisión</label>
+                                    <input name="Commission" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha primera cuota *</label>
+                            <input name="StartDate" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tarjeta asociada</label>
+                            <select name="CardId" class="form-select">
+                                <option value="">— Sin tarjeta —</option>
+                                @foreach (var c in Model.Cards)
+                                {
+                                    <option value="@c.CardId">@c.DisplayName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notas</label>
+                            <textarea name="Notes" class="form-control" rows="2" placeholder="Observaciones opcionales..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar financiamiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Edit Financing ─────────────────────────────────────────────────── -->
+<div class="modal fade" id="editFinancingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ Editar financiamiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="editFinancingForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Comercio *</label>
+                            <input name="Merchant" id="editMerchant" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Banco *</label>
+                            <input name="Bank" id="editBank" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Monto total</label>
+                            <input name="TotalAmount" id="editTotalAmount" type="number" step="0.01"
+                                   class="form-control" oninput="calcMonthly('edit')" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Moneda</label>
+                            <select name="Currency" id="editCurrency" class="form-select">
+                                <option value="CRC">CRC (₡)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha de compra</label>
+                            <input name="PurchaseDate" id="editPurchaseDate" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo</label>
+                            <select name="FinancingType" id="editFinancingType" class="form-select">
+                                <option value="cuotas_normales">Cuotas normales</option>
+                                <option value="tasa_0">Tasa 0%</option>
+                                <option value="minicuotas">Minicuotas</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Meses</label>
+                            <input name="Months" id="editMonths" type="number" min="1"
+                                   class="form-control" oninput="calcMonthly('edit');updatePendingPreview()" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Cuotas pagadas</label>
+                            <input name="PaidInstallments" id="editPaidInstallments" type="number" min="0"
+                                   class="form-control" oninput="updatePendingPreview()" />
+                            <div style="font-size:10px;color:#94a3b8;margin-top:2px">Cuotas ya pagadas</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label d-flex align-items-center gap-1">
+                                Cuota mensual
+                                <span id="editAutoTag" style="display:none;font-size:10px;background:#dbeafe;color:#2563eb;padding:1px 6px;border-radius:10px;font-weight:600">auto</span>
+                            </label>
+                            <input name="MonthlyPayment" id="editMonthlyPayment" type="number" step="0.01"
+                                   class="form-control" oninput="clearAutoTag('edit');updatePendingPreview()" />
+                            <div id="editMonthlyHint" style="font-size:11px;color:#94a3b8;margin-top:3px"></div>
+                        </div>
+                        <!-- Live recalculation preview -->
+                        <div class="col-12">
+                            <div id="editPendingPreview" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;font-size:12px">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <span style="color:#64748b">Cuotas pendientes: </span>
+                                        <strong id="previewRemaining">0</strong>
+                                        <span style="color:#94a3b8"> de </span>
+                                        <span id="previewTotal">0</span>
+                                    </div>
+                                    <div>
+                                        <span style="color:#64748b">Monto pendiente: </span>
+                                        <strong id="previewPending" style="color:#dc2626;font-size:14px">—</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha primera cuota</label>
+                            <input name="StartDate" id="editStartDate" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tarjeta asociada</label>
+                            <select name="CardId" id="editCardId" class="form-select">
+                                <option value="">— Sin tarjeta —</option>
+                                @foreach (var c in Model.Cards)
+                                {
+                                    <option value="@c.CardId">@c.DisplayName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notas</label>
+                            <textarea name="Notes" id="editNotes" class="form-control" rows="2"
+                                      placeholder="Observaciones opcionales..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// ── Auto-cálculo de cuota mensual ─────────────────────────────────────────────
+function calcMonthly(prefix) {
+    var totalEl   = document.getElementById(prefix + 'TotalAmount');
+    var monthsEl  = document.getElementById(prefix + 'Months');
+    var monthlyEl = document.getElementById(prefix + 'MonthlyPayment');
+    var hintEl    = document.getElementById(prefix + 'MonthlyHint');
+    var tagEl     = document.getElementById(prefix + 'AutoTag');
+
+    if (!totalEl || !monthsEl || !monthlyEl) return;
+
+    var total  = parseFloat(totalEl.value) || 0;
+    var months = parseInt(monthsEl.value)  || 0;
+
+    if (total > 0 && months > 0) {
+        var calc = (total / months).toFixed(2);
+        monthlyEl.value = calc;
+        if (tagEl)  { tagEl.style.display = 'inline'; }
+        if (hintEl) { hintEl.textContent = 'Calculado: ' + total.toLocaleString('es-CR', {minimumFractionDigits:2}) + ' ÷ ' + months + ' meses'; }
+    } else {
+        if (tagEl)  { tagEl.style.display = 'none'; }
+        if (hintEl) { hintEl.textContent = ''; }
+    }
+}
+
+// Al editar manualmente la cuota, quitar el badge "auto"
+function clearAutoTag(prefix) {
+    var tagEl  = document.getElementById(prefix + 'AutoTag');
+    var hintEl = document.getElementById(prefix + 'MonthlyHint');
+    if (tagEl)  tagEl.style.display = 'none';
+    if (hintEl) hintEl.textContent = 'Editado manualmente';
+}
+
+// ── Preview en vivo del monto pendiente ───────────────────────────────────────
+function updatePendingPreview() {
+    var months  = parseInt(document.getElementById('editMonths').value)           || 0;
+    var paid    = parseInt(document.getElementById('editPaidInstallments').value) || 0;
+    var monthly = parseFloat(document.getElementById('editMonthlyPayment').value) || 0;
+    var preview = document.getElementById('editPendingPreview');
+    if (months > 0 && monthly > 0) {
+        var remaining = Math.max(0, months - paid);
+        var pending   = remaining * monthly;
+        document.getElementById('previewRemaining').textContent = remaining;
+        document.getElementById('previewTotal').textContent     = months;
+        document.getElementById('previewPending').textContent   =
+            pending.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        preview.style.display = '';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// ── Abrir modal de edición — usa data-* attributes (sin problemas de encoding) ─
+function openEditModal(btn) {
+    var d = btn.dataset;   // lee todos los data-* del botón
+
+    document.getElementById('editFinancingForm').action    = '/financing/edit/' + d.id;
+    document.getElementById('editMerchant').value          = d.merchant     || '';
+    document.getElementById('editBank').value              = d.bank         || '';
+    document.getElementById('editTotalAmount').value       = d.total        || '';
+    document.getElementById('editPurchaseDate').value      = d.purchaseDate || '';
+    document.getElementById('editFinancingType').value     = d.type         || 'cuotas_normales';
+    document.getElementById('editMonths').value            = d.months       || '';
+    document.getElementById('editStartDate').value         = d.startDate    || '';
+    document.getElementById('editNotes').value             = d.notes        || '';
+    document.getElementById('editPaidInstallments').value  = d.paid         !== undefined ? d.paid : 0;
+
+    // Moneda: asignar después de setear el value para garantizar selección correcta
+    var currSel = document.getElementById('editCurrency');
+    currSel.value = d.currency || 'CRC';
+
+    // Tarjeta asociada
+    var cardSel = document.getElementById('editCardId');
+    var cardIdVal = d.cardId || '';
+    for (var i = 0; i < cardSel.options.length; i++) {
+        cardSel.options[i].selected = (cardSel.options[i].value === cardIdVal);
+    }
+
+    // Cuota mensual: mostrar valor guardado; si es 0, auto-calcular desde total ÷ meses
+    var monthlyEl     = document.getElementById('editMonthlyPayment');
+    var tagEl         = document.getElementById('editAutoTag');
+    var hintEl        = document.getElementById('editMonthlyHint');
+    var storedMonthly = parseFloat(d.monthly) || 0;
+
+    if (storedMonthly > 0) {
+        monthlyEl.value = storedMonthly.toFixed(2);
+        if (tagEl)  tagEl.style.display = 'none';
+        if (hintEl) hintEl.textContent  = '';
+    } else {
+        var total  = parseFloat(d.total)  || 0;
+        var months = parseInt(d.months)   || 0;
+        var calc   = (total > 0 && months > 0) ? (total / months).toFixed(2) : '0.00';
+        monthlyEl.value = calc;
+        if (parseFloat(calc) > 0) {
+            if (tagEl)  tagEl.style.display = 'inline';
+            if (hintEl) hintEl.textContent  = 'Calculado automáticamente';
+        } else {
+            if (tagEl)  tagEl.style.display = 'none';
+            if (hintEl) hintEl.textContent  = 'Ingresa la cuota manualmente';
+        }
+    }
+
+    updatePendingPreview();
+    new bootstrap.Modal(document.getElementById('editFinancingModal')).show();
+}
+
+function toggleRateFields(select, prefix) {
+    var show = select.value === 'cuotas_normales' || select.value === 'minicuotas';
+    var el = document.getElementById(prefix + 'RateFields');
+    if (el) el.style.display = show ? '' : 'none';
+}
+</script>
+}

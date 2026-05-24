@@ -1,0 +1,286 @@
+@model PurchaseTracker.Web.Services.ExchangeRateData
+@using System.Globalization
+@{
+    ViewData["Title"] = "Tipo de Cambio";
+
+    var compraJs = Model.IsError ? "0" : Model.Compra.ToString("F4", CultureInfo.InvariantCulture);
+    var ventaJs  = Model.IsError ? "0" : Model.Venta.ToString("F4", CultureInfo.InvariantCulture);
+    var updLabel = Model.Updated ?? Model.VentaDate ?? "—";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-header-title">💱 Tipo de Cambio</div>
+        <div class="page-header-sub">
+            Fuente: BCCR vía GoMeta · Actualizado: @updLabel
+        </div>
+    </div>
+    <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+        🔄 Actualizar
+    </button>
+</div>
+
+@if (Model.IsError)
+{
+    <div class="alert" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:12px;padding:16px 20px">
+        ⚠️ No se pudo obtener el tipo de cambio en este momento. La API de GoMeta no respondió.
+        <a href="javascript:location.reload()" style="color:#991b1b;font-weight:600;margin-left:8px">Reintentar →</a>
+    </div>
+}
+
+<!-- ── KPI cards ─────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card green" style="border-left:4px solid #10b981">
+            <div class="kpi-icon">📥</div>
+            <div class="kpi-label">Compra (Banco te compra USD)</div>
+            <div class="kpi-value text-money" style="font-size:2rem;color:#10b981">
+                @if (Model.IsError) { <span style="color:#94a3b8">—</span> }
+                else { <span>₡ @Model.Compra.ToString("N2")</span> }
+            </div>
+            <div class="kpi-sub">Por cada dólar que vendés al banco</div>
+            @if (!string.IsNullOrWhiteSpace(Model.CompraDate))
+            {
+                <div style="font-size:10px;color:#94a3b8;margin-top:4px">@Model.CompraDate</div>
+            }
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card" style="border-left:4px solid #3b82f6">
+            <div class="kpi-icon">📤</div>
+            <div class="kpi-label">Venta (Banco te vende USD)</div>
+            <div class="kpi-value text-money" style="font-size:2rem;color:#3b82f6">
+                @if (Model.IsError) { <span style="color:#94a3b8">—</span> }
+                else { <span>₡ @Model.Venta.ToString("N2")</span> }
+            </div>
+            <div class="kpi-sub">Por cada dólar que le comprás al banco</div>
+            @if (!string.IsNullOrWhiteSpace(Model.VentaDate))
+            {
+                <div style="font-size:10px;color:#94a3b8;margin-top:4px">@Model.VentaDate</div>
+            }
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card purple" style="border-left:4px solid #8b5cf6">
+            <div class="kpi-icon">↔️</div>
+            <div class="kpi-label">Margen banco (spread)</div>
+            <div class="kpi-value text-money" style="font-size:2rem;color:#8b5cf6">
+                @if (Model.IsError) { <span style="color:#94a3b8">—</span> }
+                else { <span>₡ @((Model.Venta - Model.Compra).ToString("N2"))</span> }
+            </div>
+            <div class="kpi-sub">Diferencia entre compra y venta</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card orange" style="border-left:4px solid #f59e0b">
+            <div class="kpi-icon">🕐</div>
+            <div class="kpi-label">Última consulta</div>
+            <div class="kpi-value" style="font-size:1.1rem;color:#d97706">
+                @Model.FetchedAt.ToLocalTime().ToString("HH:mm")
+            </div>
+            <div class="kpi-sub">@Model.FetchedAt.ToLocalTime().ToString("dd/MM/yyyy") · caché 30 min</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Conversor ─────────────────────────────────────────────────────────── -->
+<div class="row g-4">
+    <div class="col-xl-7">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <span style="font-size:18px">⇄</span>
+                <span>Conversor USD / CRC</span>
+            </div>
+            <div class="card-body" style="padding:28px 32px">
+
+                @if (Model.IsError)
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📡</div>
+                        <div class="empty-state-text">No hay tipo de cambio disponible</div>
+                    </div>
+                }
+                else
+                {
+                    <!-- Monto de entrada -->
+                    <div class="mb-4">
+                        <label class="form-label fw-600" style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em">
+                            Monto a convertir
+                        </label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input id="convAmount"
+                                   type="number" min="0" step="0.01"
+                                   placeholder="0.00"
+                                   class="form-control"
+                                   style="font-size:28px;font-weight:700;text-align:right;height:62px;border-radius:12px;border:2px solid #e2e8f0;font-variant-numeric:tabular-nums"
+                                   oninput="calcAll()" />
+                            <div style="flex-shrink:0">
+                                <select id="convFrom" class="form-select"
+                                        style="font-size:16px;font-weight:700;height:62px;border-radius:12px;border:2px solid #e2e8f0;min-width:90px"
+                                        onchange="calcAll()">
+                                    <option value="USD">🇺🇸 USD</option>
+                                    <option value="CRC">🇨🇷 CRC</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón swap -->
+                    <div class="text-center mb-4">
+                        <button onclick="swapCurrencies()"
+                                style="background:#f1f5f9;border:2px solid #e2e8f0;border-radius:50%;width:44px;height:44px;font-size:18px;cursor:pointer;transition:all .2s"
+                                onmouseover="this.style.background='#e2e8f0'"
+                                onmouseout="this.style.background='#f1f5f9'"
+                                title="Intercambiar monedas">
+                            ⇅
+                        </button>
+                    </div>
+
+                    <!-- Resultado -->
+                    <div class="mb-4">
+                        <label class="form-label fw-600" style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em">
+                            Resultado
+                        </label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <div id="convResult"
+                                 style="flex:1;font-size:28px;font-weight:700;text-align:right;height:62px;border-radius:12px;border:2px solid #e2e8f0;padding:0 18px;display:flex;align-items:center;justify-content:flex-end;background:#f8fafc;color:#0f172a;font-variant-numeric:tabular-nums">
+                                —
+                            </div>
+                            <div id="convToLabel"
+                                 style="flex-shrink:0;font-size:16px;font-weight:700;background:#f1f5f9;border:2px solid #e2e8f0;border-radius:12px;height:62px;min-width:90px;display:flex;align-items:center;justify-content:center;color:#475569">
+                                🇨🇷 CRC
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tasa usada -->
+                    <div id="convRateNote"
+                         style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;font-size:13px;color:#0369a1">
+                        Ingresa un monto para ver la conversión
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Tabla de referencia rápida ───────────────────── -->
+    <div class="col-xl-5">
+        @if (!Model.IsError)
+        {
+            <div class="card mb-4">
+                <div class="card-header">📋 Referencia rápida — USD → CRC</div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>USD</th>
+                                <th class="text-end">Compra (recibes)</th>
+                                <th class="text-end">Venta (pagas)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var amt in new[] { 1m, 5m, 10m, 20m, 50m, 100m, 200m, 500m, 1000m })
+                            {
+                                <tr>
+                                    <td class="text-money fw-600">$ @amt.ToString("N0")</td>
+                                    <td class="text-end text-money" style="color:#10b981">₡ @((amt * Model.Compra).ToString("N0"))</td>
+                                    <td class="text-end text-money" style="color:#3b82f6">₡ @((amt * Model.Venta).ToString("N0"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">📋 Referencia rápida — CRC → USD</div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>CRC</th>
+                                <th class="text-end">Compra (recibes)</th>
+                                <th class="text-end">Venta (pagas)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var amt in new[] { 1000m, 5000m, 10000m, 25000m, 50000m, 100000m, 250000m, 500000m })
+                            {
+                                <tr>
+                                    <td class="text-money fw-600">₡ @amt.ToString("N0")</td>
+                                    <td class="text-end text-money" style="color:#10b981">$ @((amt / Model.Venta).ToString("N2"))</td>
+                                    <td class="text-end text-money" style="color:#3b82f6">$ @((amt / Model.Compra).ToString("N2"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var COMPRA = @compraJs;
+    var VENTA  = @ventaJs;
+
+    function fmt(n, cur) {
+        if (cur === 'CRC')
+            return '₡ ' + n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return '$ ' + n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    }
+
+    window.calcAll = function () {
+        var raw  = parseFloat(document.getElementById('convAmount').value);
+        var from = document.getElementById('convFrom').value;
+        var to   = from === 'USD' ? 'CRC' : 'USD';
+
+        // Etiqueta destino
+        document.getElementById('convToLabel').textContent = to === 'CRC' ? '🇨🇷 CRC' : '🇺🇸 USD';
+
+        var resEl  = document.getElementById('convResult');
+        var noteEl = document.getElementById('convRateNote');
+
+        if (isNaN(raw) || raw <= 0) {
+            resEl.textContent = '—';
+            noteEl.innerHTML  = 'Ingresa un monto para ver la conversión';
+            noteEl.style.background = '#f0f9ff';
+            noteEl.style.borderColor = '#bae6fd';
+            noteEl.style.color = '#0369a1';
+            return;
+        }
+
+        var result, tasa, tasaNombre;
+        if (from === 'USD') {
+            // USD → CRC: usa tasa de VENTA (el banco te vende el dólar)
+            tasa      = VENTA;
+            tasaNombre = 'Venta';
+            result    = raw * VENTA;
+        } else {
+            // CRC → USD: usa tasa de COMPRA (el banco te compra el colón)
+            tasa      = COMPRA;
+            tasaNombre = 'Compra';
+            result    = raw / COMPRA;
+        }
+
+        resEl.textContent = fmt(result, to);
+
+        var urgency = from === 'USD'
+            ? '📤 Usando tasa de <strong>' + tasaNombre + '</strong> (₡' + tasa.toLocaleString('es-CR', {minimumFractionDigits:2}) + ') — lo que el banco cobra por el dólar'
+            : '📥 Usando tasa de <strong>' + tasaNombre + '</strong> (₡' + tasa.toLocaleString('es-CR', {minimumFractionDigits:2}) + ') — lo que el banco paga por el colón';
+        noteEl.innerHTML  = urgency;
+        noteEl.style.background  = from === 'USD' ? '#eff6ff' : '#f0fdf4';
+        noteEl.style.borderColor = from === 'USD' ? '#bae6fd' : '#bbf7d0';
+        noteEl.style.color       = from === 'USD' ? '#1d4ed8' : '#15803d';
+    };
+
+    window.swapCurrencies = function () {
+        var sel = document.getElementById('convFrom');
+        sel.value = sel.value === 'USD' ? 'CRC' : 'USD';
+        calcAll();
+    };
+})();
+</script>
+}

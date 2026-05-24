@@ -1,0 +1,227 @@
+@model AdminViewModel
+@{
+    ViewData["Title"] = "Administración";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-header-title">🛡️ Administración</div>
+        <div class="page-header-sub">Gestión de usuarios del sistema</div>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        + Nuevo usuario
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="kpi-card">
+            <div class="kpi-label">Total usuarios</div>
+            <div class="kpi-value">@Model.TotalUsers</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="kpi-card green">
+            <div class="kpi-label">Activos</div>
+            <div class="kpi-value">@Model.ActiveUsers</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="kpi-card red">
+            <div class="kpi-label">Inactivos</div>
+            <div class="kpi-value">@(Model.TotalUsers - Model.ActiveUsers)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Users table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>👥 Usuarios registrados</span>
+        <span style="font-size:12px;color:#94a3b8;font-weight:400">@Model.TotalUsers usuario(s)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Correo</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Creado</th>
+                        <th style="text-align:right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model.Users)
+                    {
+                        var isProtected = u.Email == "admin@purchasetracker.local";
+                        <tr class="@(!u.IsActive ? "table-secondary" : "")">
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="user-avatar" style="width:32px;height:32px;font-size:12px;flex-shrink:0">
+                                        @string.Concat(u.FullName.Split(' ').Take(2).Select(w => char.ToUpper(w[0])))
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;font-size:14px">@u.FullName</div>
+                                        @if (isProtected)
+                                        {
+                                            <div style="font-size:10px;color:#94a3b8">Sistema protegido</div>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="font-size:13px;color:#475569">@u.Email</td>
+                            <td>
+                                @if (u.Role == "admin")
+                                {
+                                    <span class="badge-status-aprobada" style="background:#ede9fe;color:#7c3aed">Admin</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-status-aprobada" style="background:#f0f9ff;color:#0369a1">Usuario</span>
+                                }
+                            </td>
+                            <td>
+                                @if (u.IsActive)
+                                {
+                                    <span class="badge-status-aprobada">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-status-rechazada">Inactivo</span>
+                                }
+                            </td>
+                            <td style="font-size:12px;color:#94a3b8">@u.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            <td style="text-align:right">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    @if (!isProtected)
+                                    {
+                                        <!-- Toggle active -->
+                                        <form method="post" action="/admin/users/@u.UserId/toggle" style="display:inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-warning" : "btn-success")"
+                                                    title="@(u.IsActive ? "Desactivar" : "Activar")">
+                                                @(u.IsActive ? "⏸" : "▶")
+                                            </button>
+                                        </form>
+
+                                        <!-- Reset password -->
+                                        <button class="btn btn-sm btn-secondary"
+                                                onclick="openResetPassword(@u.UserId, '@u.FullName.Replace("'", "\\'")' )"
+                                                title="Restablecer contraseña">
+                                            🔑
+                                        </button>
+
+                                        <!-- Delete -->
+                                        <form method="post" action="/admin/users/@u.UserId/delete" style="display:inline"
+                                              onsubmit="return confirm('¿Eliminar a @u.FullName.Replace("'", "\\'")? Esta acción no se puede deshacer.')">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Eliminar usuario">
+                                                🗑
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span style="font-size:11px;color:#94a3b8;padding:4px 8px">Protegido</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Create User ───────────────────────────────────────────────────── -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">➕ Nuevo usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/admin/users/create">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Nombre completo *</label>
+                            <input name="FullName" class="form-control" placeholder="Juan Pérez" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Correo electrónico *</label>
+                            <input name="Email" type="email" class="form-control" placeholder="juan@email.com" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Contraseña *</label>
+                            <input name="Password" type="password" class="form-control" placeholder="Mínimo 8 caracteres" minlength="8" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Rol</label>
+                            <select name="Role" class="form-select">
+                                <option value="user">Usuario</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="SendWelcomeEmail" id="chkWelcome" value="true" checked />
+                                <label class="form-check-label" for="chkWelcome" style="font-size:13px">
+                                    Enviar correo de bienvenida con los datos de acceso
+                                </label>
+                            </div>
+                            <p style="font-size:11px;color:#94a3b8;margin:4px 0 0 24px">
+                                Requiere configurar Email:Host en appsettings.json
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Reset Password ──────────────────────────────────────────────── -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🔑 Restablecer contraseña</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="resetPwForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <p id="resetPwUserName" style="font-size:13px;color:#475569;margin-bottom:12px"></p>
+                    <label class="form-label">Nueva contraseña *</label>
+                    <input name="newPassword" type="password" class="form-control"
+                           placeholder="Mínimo 8 caracteres" minlength="8" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Restablecer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function openResetPassword(userId, userName) {
+    document.getElementById('resetPwForm').action = '/admin/users/' + userId + '/reset-password';
+    document.getElementById('resetPwUserName').textContent = 'Usuario: ' + userName;
+    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+</script>
+}

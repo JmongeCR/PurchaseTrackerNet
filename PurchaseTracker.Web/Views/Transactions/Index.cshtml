@@ -1,0 +1,799 @@
+@model TransactionListViewModel
+@{
+    ViewData["Title"] = "Movimientos";
+
+    var txMapJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Transactions.ToDictionary(t => t.TransactionId, t => new {
+            id           = t.TransactionId,
+            merchant     = t.Merchant,
+            bank         = t.Bank,
+            cardName     = t.Card?.DisplayName ?? "",
+            cardId       = t.CardId,
+            catName      = t.Category?.Name ?? "",
+            catColor     = t.Category?.Color ?? "",
+            catIcon      = t.Category?.IconEmoji ?? "",
+            categoryId   = t.CategoryId,
+            amount       = t.Amount,
+            currency     = t.Currency,
+            date         = t.TransactionDate.ToString("yyyy-MM-dd"),
+            time         = t.TransactionDate.ToString("HH:mm"),
+            status       = t.Status,
+            movementType = t.MovementType,
+            origin       = t.Origin,
+            description  = t.Description ?? "",
+            notes        = t.Notes ?? "",
+            reference    = $"#{t.TransactionId}"
+        })
+    );
+}
+
+<style>
+/* ── Drawer overlay ─────────────────────────────────────────────── */
+#txOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1040;opacity:0;transition:opacity .25s;pointer-events:none}
+#txOverlay.open{opacity:1;pointer-events:all}
+
+/* ── Drawer panel ───────────────────────────────────────────────── */
+#txDrawer{
+    position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;
+    background:#fff;z-index:1041;
+    transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+    display:flex;flex-direction:column;
+    box-shadow:-6px 0 40px rgba(0,0,0,.16)
+}
+#txDrawer.open{transform:translateX(0)}
+
+/* Mobile: bottom sheet */
+@@media(max-width:600px){
+    #txDrawer{
+        top:auto;left:0;right:0;width:100%;height:92dvh;border-radius:20px 20px 0 0;
+        transform:translateY(110%)
+    }
+    #txDrawer.open{transform:translateY(0)}
+}
+
+/* ── Drawer internals ───────────────────────────────────────────── */
+.dr-handle{display:none;width:40px;height:4px;border-radius:2px;background:#cbd5e1;margin:10px auto 2px}
+@@media(max-width:600px){.dr-handle{display:block}}
+.dr-head{display:flex;align-items:center;gap:12px;padding:18px 20px 14px;border-bottom:1px solid #f1f5f9}
+.dr-avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}
+.dr-merchant{font-size:17px;font-weight:700;color:#0f172a;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dr-close{width:32px;height:32px;border:none;background:#f1f5f9;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0}
+.dr-close:hover{background:#e2e8f0}
+.dr-body{flex:1;overflow-y:auto;padding:0 20px 20px}
+.dr-amount-block{text-align:center;padding:24px 0 20px;border-bottom:1px solid #f1f5f9}
+.dr-amount{font-size:36px;font-weight:800;letter-spacing:-1px}
+.dr-amount.crc{color:#0f172a}
+.dr-amount.usd{color:#0369a1}
+.dr-datetime{font-size:13px;color:#94a3b8;margin-top:4px}
+.dr-rows{padding:16px 0}
+.dr-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f8fafc}
+.dr-row:last-child{border-bottom:none}
+.dr-row-icon{width:32px;text-align:center;font-size:15px;flex-shrink:0;color:#94a3b8}
+.dr-row-label{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;width:90px;flex-shrink:0}
+.dr-row-val{font-size:13px;font-weight:600;color:#1e293b;flex:1}
+.dr-notes-block{background:#f8fafc;border-radius:10px;padding:12px 14px;margin-top:4px}
+.dr-notes-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:4px}
+.dr-notes-text{font-size:13px;color:#475569;line-height:1.5}
+.dr-foot{padding:14px 20px;border-top:1px solid #f1f5f9;display:flex;gap:8px}
+.dr-foot .btn{flex:1;font-size:13px}
+.dr-ref{font-size:11px;color:#cbd5e1;text-align:center;margin-top:8px}
+
+/* Clickable rows */
+.tx-row{cursor:pointer}
+.tx-row:hover td{background:#f8fafc}
+</style>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <div class="page-header-title">💳 Movimientos</div>
+        <div class="page-header-sub">@Model.TotalCount transacción(es) encontrada(s)</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="@Url.Action("Export", new { Model.Search, Model.Bank, Model.Currency, Model.MovementType, Model.Status, Model.CategoryId, Model.CardId, Model.StartDate, Model.EndDate })"
+           class="btn btn-secondary btn-sm">📥 Exportar CSV</a>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTxModal">
+            + Nueva Transacción
+        </button>
+    </div>
+</div>
+
+<!-- Stats Row -->
+@if (Model.TotalCrc > 0 || Model.TotalUsd > 0)
+{
+    <div class="row g-3 mb-3">
+        <div class="col-auto">
+            <div class="kpi-card" style="padding:14px 20px">
+                <div class="kpi-label">Total CRC (filtrado)</div>
+                <div class="kpi-value text-money" style="font-size:20px">₡ @Model.TotalCrc.ToString("N0")</div>
+            </div>
+        </div>
+        @if (Model.TotalUsd > 0)
+        {
+            <div class="col-auto">
+                <div class="kpi-card green" style="padding:14px 20px">
+                    <div class="kpi-label">Total USD (filtrado)</div>
+                    <div class="kpi-value text-money" style="font-size:20px">$ @Model.TotalUsd.ToString("N2")</div>
+                </div>
+            </div>
+        }
+        <div class="col-auto">
+            <div class="kpi-card purple" style="padding:14px 20px">
+                <div class="kpi-label">Cantidad</div>
+                <div class="kpi-value" style="font-size:20px">@Model.TotalCount</div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form method="get" action="/transactions" class="row g-2 align-items-end">
+            <div class="col-sm-6 col-lg-3">
+                <label class="form-label">Buscar</label>
+                <input name="search" value="@Model.Search" class="form-control" placeholder="Comercio o descripción..." />
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Banco</label>
+                <select name="bank" class="form-select">
+                    <option value="">Todos</option>
+                    @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
+                    {
+                        <option value="@b" selected="@(Model.Bank == b)">@b</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Moneda</label>
+                <select name="currency" class="form-select">
+                    <option value="">Todas</option>
+                    <option value="CRC" selected="@(Model.Currency == "CRC")">CRC</option>
+                    <option value="USD" selected="@(Model.Currency == "USD")">USD</option>
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Tipo</label>
+                <select name="movementType" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="compra" selected="@(Model.MovementType == "compra")">Compra</option>
+                    <option value="servicio" selected="@(Model.MovementType == "servicio")">Servicio</option>
+                    <option value="suscripcion" selected="@(Model.MovementType == "suscripcion")">Suscripción</option>
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Estado</label>
+                <select name="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Aprobada" selected="@(Model.Status == "Aprobada")">Aprobada</option>
+                    <option value="Rechazada" selected="@(Model.Status == "Rechazada")">Rechazada</option>
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Categoría</label>
+                <select name="categoryId" class="form-select">
+                    <option value="">Todas</option>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        <option value="@cat.CategoryId" selected="@(Model.CategoryId == cat.CategoryId)">@cat.IconEmoji @cat.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Tarjeta</label>
+                <select name="cardId" class="form-select">
+                    <option value="">Todas</option>
+                    @foreach (var card in Model.Cards)
+                    {
+                        <option value="@card.CardId" selected="@(Model.CardId == card.CardId)">@card.DisplayName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Desde</label>
+                <input name="startDate" type="date" class="form-control" value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Hasta</label>
+                <input name="endDate" type="date" class="form-control" value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-sm-4 col-lg-2">
+                <label class="form-label">Ordenar</label>
+                <select name="sort" class="form-select">
+                    <option value="date_desc" selected="@(Model.Sort == "date_desc")">Más reciente</option>
+                    <option value="date_asc" selected="@(Model.Sort == "date_asc")">Más antiguo</option>
+                    <option value="amount_desc" selected="@(Model.Sort == "amount_desc")">Mayor monto</option>
+                    <option value="amount_asc" selected="@(Model.Sort == "amount_asc")">Menor monto</option>
+                </select>
+            </div>
+            <div class="col-sm-4 col-lg-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill">Filtrar</button>
+                <a href="/transactions" class="btn btn-secondary">✕</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Comercio</th>
+                        <th>Banco</th>
+                        <th>Monto</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Categoría</th>
+                        <th>Tarjeta</th>
+                        <th style="width:60px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Transactions.Any())
+                    {
+                        @foreach (var tx in Model.Transactions)
+                        {
+                            <tr class="tx-row" data-tx-id="@tx.TransactionId">
+                                <td style="font-size:12px;color:#64748b;white-space:nowrap">
+                                    @tx.TransactionDate.ToString("dd/MM/yyyy")
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="merchant-avatar">@(tx.Merchant.Length > 0 ? tx.Merchant[0].ToString().ToUpper() : "?")</div>
+                                        <div>
+                                            <div style="font-size:13px;font-weight:600">@tx.Merchant</div>
+                                            @if (!string.IsNullOrEmpty(tx.Notes))
+                                            {
+                                                <div style="font-size:11px;color:#94a3b8">@tx.Notes</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="font-size:12.5px">@tx.Bank</td>
+                                <td style="font-size:13px;font-weight:600;font-family:monospace;color:@(tx.Currency == "USD" ? "#0369a1" : "#0f172a")">
+                                    @(tx.Currency == "CRC" ? "₡" : "$") @tx.Amount.ToString("N0")
+                                    <div style="font-size:10px;font-weight:400;color:#94a3b8">
+                                        <span class="@(tx.Currency == "CRC" ? "badge-crc" : "badge-usd") badge-cat">@tx.Currency</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (tx.MovementType == "compra")
+                                    {
+                                        <span title="Compra">🛒</span>
+                                    }
+                                    else if (tx.MovementType == "retiro_cajero")
+                                    {
+                                        <span title="Retiro ATM">🏧</span>
+                                    }
+                                    else
+                                    {
+                                        <span title="@tx.MovementType">🔄</span>
+                                    }
+                                    <div style="font-size:10px;color:#94a3b8">@(tx.Origin == "manual" ? "manual" : "auto")</div>
+                                </td>
+                                <td>
+                                    @if (tx.Status == "Aprobada")
+                                    {
+                                        <span class="badge-status-aprobada">✓ Aprobada</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-status-rechazada">✗ @tx.Status</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (tx.Category != null)
+                                    {
+                                        <span class="badge-cat" style="background:@(tx.Category.Color)22;color:@tx.Category.Color;border:1px solid @(tx.Category.Color)44">
+                                            @tx.Category.IconEmoji @tx.Category.Name
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-secondary assign-cat-btn"
+                                                data-tx-id="@tx.TransactionId"
+                                                style="font-size:11px;padding:2px 8px">
+                                            + Categoría
+                                        </button>
+                                    }
+                                </td>
+                                <td style="font-size:12px;color:#64748b">@(tx.Card?.DisplayName ?? "—")</td>
+                                <td onclick="event.stopPropagation()">
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm btn-secondary" title="Editar"
+                                                onclick="drawerEdit(@tx.TransactionId)">
+                                            ✏️
+                                        </button>
+                                        <form method="post" action="/transactions/delete/@tx.TransactionId"
+                                              onsubmit="return confirm('¿Eliminar esta transacción?')">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">💳</div>
+                                    <div class="empty-state-text">No se encontraron transacciones</div>
+                                    <div style="font-size:12px;margin-top:6px;color:#94a3b8">Ajusta los filtros o agrega una nueva transacción</div>
+                                    <button class="btn btn-primary btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#addTxModal">+ Nueva Transacción</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-body border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span style="font-size:13px;color:#64748b">
+                Página @Model.Page de @Model.TotalPages (@Model.TotalCount registros)
+            </span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    @if (Model.Page > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="?page=@(Model.Page-1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">‹</a>
+                        </li>
+                    }
+                    @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
+                    {
+                        <li class="page-item @(i == Model.Page ? "active" : "")">
+                            <a class="page-link" href="?page=@i&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">@i</a>
+                        </li>
+                    }
+                    @if (Model.Page < Model.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="?page=@(Model.Page+1)&search=@Model.Search&bank=@Model.Bank&currency=@Model.Currency&sort=@Model.Sort&startDate=@Model.StartDate?.ToString("yyyy-MM-dd")&endDate=@Model.EndDate?.ToString("yyyy-MM-dd")">›</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+<!-- ── Transaction Drawer ──────────────────────────────────────────────────── -->
+<div id="txOverlay" onclick="closeDrawer()"></div>
+<div id="txDrawer">
+    <div class="dr-handle"></div>
+    <div class="dr-head">
+        <div class="dr-avatar" id="drAvatar"></div>
+        <div class="dr-merchant" id="drMerchant"></div>
+        <button class="dr-close" onclick="closeDrawer()" title="Cerrar">✕</button>
+    </div>
+    <div class="dr-body">
+        <div class="dr-amount-block">
+            <div class="dr-amount" id="drAmount"></div>
+            <div class="dr-datetime" id="drDatetime"></div>
+        </div>
+        <div class="dr-rows">
+            <div class="dr-row">
+                <div class="dr-row-icon">🏦</div>
+                <div class="dr-row-label">Banco</div>
+                <div class="dr-row-val" id="drBank"></div>
+            </div>
+            <div class="dr-row">
+                <div class="dr-row-icon">💳</div>
+                <div class="dr-row-label">Tarjeta</div>
+                <div class="dr-row-val" id="drCard"></div>
+            </div>
+            <div class="dr-row">
+                <div class="dr-row-icon">🏷️</div>
+                <div class="dr-row-label">Categoría</div>
+                <div class="dr-row-val" id="drCategory"></div>
+            </div>
+            <div class="dr-row">
+                <div class="dr-row-icon">⚡</div>
+                <div class="dr-row-label">Estado</div>
+                <div class="dr-row-val" id="drStatus"></div>
+            </div>
+            <div class="dr-row">
+                <div class="dr-row-icon">🔄</div>
+                <div class="dr-row-label">Tipo</div>
+                <div class="dr-row-val" id="drType"></div>
+            </div>
+            <div class="dr-row">
+                <div class="dr-row-icon">📡</div>
+                <div class="dr-row-label">Origen</div>
+                <div class="dr-row-val" id="drOrigin"></div>
+            </div>
+        </div>
+        <div id="drNotesBlock" class="dr-notes-block" style="display:none">
+            <div class="dr-notes-label" id="drNotesLabel"></div>
+            <div class="dr-notes-text" id="drNotesText"></div>
+        </div>
+        <div class="dr-ref" id="drRef"></div>
+    </div>
+    <div class="dr-foot">
+        <button class="btn btn-outline-primary" id="drEditBtn" onclick="drawerEditCurrent()">✏️ Editar</button>
+        <button class="btn btn-outline-secondary" id="drDupBtn">📋 Duplicar</button>
+        <button class="btn btn-outline-danger" id="drDelBtn">🗑 Eliminar</button>
+    </div>
+</div>
+
+<!-- Add Transaction Modal -->
+<div class="modal fade" id="addTxModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">➕ Nueva Transacción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/transactions/add">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Banco *</label>
+                            <select name="Bank" id="txBank" class="form-select" required>
+                                <option value="">Seleccionar banco</option>
+                                @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
+                                {
+                                    <option value="@b">@b</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tarjeta</label>
+                            <select name="CardId" id="txCard" class="form-select">
+                                <option value="">Sin tarjeta</option>
+                                @foreach (var card in Model.Cards)
+                                {
+                                    <option value="@card.CardId" data-bank="@card.Bank">@card.DisplayName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Comercio *</label>
+                            <input name="Merchant" class="form-control" placeholder="Nombre del comercio" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Monto *</label>
+                            <input name="Amount" type="number" step="0.01" min="0.01" class="form-control" placeholder="0.00" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Moneda *</label>
+                            <select name="Currency" class="form-select">
+                                <option value="CRC">CRC — Colón</option>
+                                <option value="USD">USD — Dólar</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha *</label>
+                            <input name="TransactionDate" type="date" class="form-control"
+                                   value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select name="Status" class="form-select">
+                                <option value="Aprobada">Aprobada</option>
+                                <option value="Rechazada">Rechazada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo</label>
+                            <select name="MovementType" class="form-select">
+                                <option value="compra">Compra</option>
+                                <option value="servicio">Servicio</option>
+                                <option value="suscripcion">Suscripción</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Categoría</label>
+                            <select name="CategoryId" class="form-select">
+                                <option value="">Sin categoría</option>
+                                @foreach (var cat in Model.Categories)
+                                {
+                                    <option value="@cat.CategoryId">@cat.IconEmoji @cat.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notas</label>
+                            <textarea name="Notes" class="form-control" rows="2" placeholder="Notas opcionales..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar transacción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Category Modal -->
+<div class="modal fade" id="assignCatModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🏷️ Asignar categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="assignTxId" />
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var cat in Model.Categories)
+                    {
+                        <button class="btn btn-secondary text-start d-flex align-items-center gap-2 cat-select-btn"
+                                data-cat-id="@cat.CategoryId">
+                            <span style="width:10px;height:10px;border-radius:50%;background:@cat.Color;display:inline-block"></span>
+                            @cat.IconEmoji @cat.Name
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Transaction Modal -->
+<div class="modal fade" id="editTxModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ Editar Transacción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="editTxForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Banco *</label>
+                            <select name="Bank" id="etBank" class="form-select" required>
+                                @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
+                                {
+                                    <option value="@b">@b</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tarjeta</label>
+                            <select name="CardId" id="etCard" class="form-select">
+                                <option value="">Sin tarjeta</option>
+                                @foreach (var card in Model.Cards)
+                                {
+                                    <option value="@card.CardId">@card.DisplayName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Comercio *</label>
+                            <input name="Merchant" id="etMerchant" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Monto *</label>
+                            <input name="Amount" id="etAmount" type="number" step="0.01" min="0.01" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Moneda *</label>
+                            <select name="Currency" id="etCurrency" class="form-select">
+                                <option value="CRC">CRC — Colón</option>
+                                <option value="USD">USD — Dólar</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha *</label>
+                            <input name="TransactionDate" id="etDate" type="date" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select name="Status" id="etStatus" class="form-select">
+                                <option value="Aprobada">Aprobada</option>
+                                <option value="Rechazada">Rechazada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo</label>
+                            <select name="MovementType" id="etMovementType" class="form-select">
+                                <option value="compra">Compra</option>
+                                <option value="servicio">Servicio</option>
+                                <option value="suscripcion">Suscripción</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Categoría</label>
+                            <select name="CategoryId" id="etCategory" class="form-select">
+                                <option value="">Sin categoría</option>
+                                @foreach (var cat in Model.Categories)
+                                {
+                                    <option value="@cat.CategoryId">@cat.IconEmoji @cat.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notas</label>
+                            <textarea name="Notes" id="etNotes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── Transaction Drawer ──────────────────────────────────────────
+    const TX_MAP = @Html.Raw(txMapJson);
+    let currentTxId = null;
+
+    const typeLabels = { compra:'Compra', servicio:'Servicio', suscripcion:'Suscripción', retiro_cajero:'Retiro ATM' };
+
+    function openDrawer(txId) {
+        const t = TX_MAP[txId];
+        if (!t) return;
+        currentTxId = txId;
+
+        // Header
+        document.getElementById('drAvatar').textContent   = t.merchant.charAt(0).toUpperCase();
+        document.getElementById('drMerchant').textContent = t.merchant;
+
+        // Amount
+        const amtEl = document.getElementById('drAmount');
+        amtEl.textContent = (t.currency === 'CRC' ? '₡ ' : '$ ') + parseFloat(t.amount).toLocaleString('es-CR', {minimumFractionDigits: 0});
+        amtEl.className = 'dr-amount ' + (t.currency === 'USD' ? 'usd' : 'crc');
+
+        // Date + time (hide 00:00 time for date-only records)
+        const timeStr = t.time && t.time !== '00:00' ? ' · ' + t.time : '';
+        const [y,m,d] = t.date.split('-');
+        document.getElementById('drDatetime').textContent = `${d}/${m}/${y}${timeStr}`;
+
+        // Info rows
+        document.getElementById('drBank').textContent = t.bank || '—';
+        document.getElementById('drCard').textContent = t.cardName || '—';
+
+        const catEl = document.getElementById('drCategory');
+        catEl.innerHTML = t.catName
+            ? `<span style="background:${t.catColor}22;color:${t.catColor};border:1px solid ${t.catColor}44;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">${t.catIcon} ${t.catName}</span>`
+            : '<span style="color:#94a3b8">Sin categoría</span>';
+
+        const statusEl = document.getElementById('drStatus');
+        statusEl.innerHTML = t.status === 'Aprobada'
+            ? '<span style="background:#dcfce7;color:#16a34a;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">✓ Aprobada</span>'
+            : '<span style="background:#fee2e2;color:#dc2626;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">✗ ' + t.status + '</span>';
+
+        document.getElementById('drType').textContent   = typeLabels[t.movementType] || t.movementType;
+        document.getElementById('drOrigin').textContent = t.origin === 'manual' ? '✍️ Manual' : '🤖 Importado';
+
+        // Notes / description
+        const notesBlock = document.getElementById('drNotesBlock');
+        const combined = [t.description, t.notes].filter(Boolean).join('\n');
+        if (combined) {
+            document.getElementById('drNotesLabel').textContent = 'Descripción / Notas';
+            document.getElementById('drNotesText').textContent  = combined;
+            notesBlock.style.display = '';
+        } else {
+            notesBlock.style.display = 'none';
+        }
+
+        document.getElementById('drRef').textContent = t.reference;
+
+        // Wire action buttons
+        const csrf = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        document.getElementById('drDupBtn').onclick = () => submitForm(`/transactions/duplicate/${txId}`, csrf);
+        document.getElementById('drDelBtn').onclick = () => {
+            if (confirm(`¿Eliminar la transacción de ${t.merchant}?`))
+                submitForm(`/transactions/delete/${txId}`, csrf);
+        };
+
+        // Open
+        document.getElementById('txOverlay').classList.add('open');
+        document.getElementById('txDrawer').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDrawer() {
+        document.getElementById('txOverlay').classList.remove('open');
+        document.getElementById('txDrawer').classList.remove('open');
+        document.body.style.overflow = '';
+        currentTxId = null;
+    }
+
+    function drawerEdit(txId) {
+        closeDrawer();
+        const t = TX_MAP[txId];
+        if (!t) return;
+        openEditTx(txId, t.bank, t.merchant, t.amount, t.currency, t.date, t.status, t.movementType, t.cardId, t.categoryId, t.notes);
+    }
+
+    function drawerEditCurrent() { if (currentTxId) drawerEdit(currentTxId); }
+
+    function submitForm(action, csrf) {
+        const f = document.createElement('form');
+        f.method = 'post'; f.action = action;
+        const tok = document.createElement('input');
+        tok.type = 'hidden'; tok.name = '__RequestVerificationToken'; tok.value = csrf;
+        f.appendChild(tok);
+        document.body.appendChild(f);
+        f.submit();
+    }
+
+    // Row click → open drawer
+    document.querySelectorAll('.tx-row').forEach(row => {
+        row.addEventListener('click', () => openDrawer(parseInt(row.dataset.txId)));
+    });
+
+    // Escape key closes drawer
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+    function sel(id, val) {
+        var el = document.getElementById(id);
+        for (var o of el.options) o.selected = (o.value == val || (val === null && o.value === ''));
+    }
+
+    function openEditTx(txId, bank, merchant, amount, currency, date, status, movementType, cardId, categoryId, notes) {
+        document.getElementById('editTxForm').action = '/transactions/edit/' + txId;
+        document.getElementById('etMerchant').value = merchant;
+        document.getElementById('etAmount').value   = amount;
+        document.getElementById('etDate').value     = date;
+        document.getElementById('etNotes').value    = notes;
+        sel('etBank', bank);
+        sel('etCurrency', currency);
+        sel('etStatus', status);
+        sel('etMovementType', movementType);
+        sel('etCard', cardId);
+        sel('etCategory', categoryId);
+        new bootstrap.Modal(document.getElementById('editTxModal')).show();
+    }
+
+    // Auto-fill bank from card selection
+    document.getElementById('txCard').addEventListener('change', function() {
+        var selected = this.options[this.selectedIndex];
+        var bank = selected.dataset.bank;
+        if (bank) {
+            var bankSelect = document.getElementById('txBank');
+            for (var i = 0; i < bankSelect.options.length; i++) {
+                if (bankSelect.options[i].value === bank) {
+                    bankSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    });
+
+    // Assign category
+    document.querySelectorAll('.assign-cat-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('assignTxId').value = this.dataset.txId;
+            new bootstrap.Modal(document.getElementById('assignCatModal')).show();
+        });
+    });
+
+    document.querySelectorAll('.cat-select-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            var txId = document.getElementById('assignTxId').value;
+            var catId = this.dataset.catId;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var resp = await fetch('/transactions/assign-category?transactionId=' + txId + '&categoryId=' + catId, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token }
+            });
+            if (resp.ok) { location.reload(); }
+        });
+    });
+</script>
+}

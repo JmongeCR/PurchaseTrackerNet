@@ -1,0 +1,25 @@
+@model PurchaseTracker.Shared.Entities.Transaction
+
+<tr>
+    <td>
+        <div class="d-flex align-items-center gap-2">
+            <div class="merchant-avatar">@Model.Merchant.FirstOrDefault()</div>
+            <div class="fw-600">@Model.Merchant</div>
+        </div>
+    </td>
+    <td style="font-size:12px;color:var(--text-secondary)">@Model.Bank</td>
+    <td class="text-money fw-600">
+        @(Model.Currency == "CRC" ? "₡" : "$") @Model.Amount.ToString("N0")
+    </td>
+    <td style="font-size:12px">@Model.TransactionDate.ToString("dd/MM/yyyy")</td>
+    <td>
+        @if (Model.Status == "Aprobada")
+        {
+            <span class="badge badge-approved">Aprobada</span>
+        }
+        else
+        {
+            <span class="badge badge-rejected">@Model.Status</span>
+        }
+    </td>
+</tr>

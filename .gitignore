@@ -1,0 +1,28 @@
+# Build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Secrets — NUNCA subir al repositorio
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.json
+
+# EF migrations snapshot temporal
+# (descomenta si no quieres versionar migraciones)
+# **/Migrations/
+
+# Logs
+*.log
+logs/
+
+# dotnet publish output
+publish/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db

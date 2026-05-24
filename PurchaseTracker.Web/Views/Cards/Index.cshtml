@@ -1,0 +1,746 @@
+@model CardListViewModel
+@{
+    ViewData["Title"] = "Tarjetas";
+    var activeTab = ViewData["ActiveTab"]?.ToString() ?? "tarjetas";
+    var requestTab = Context.Request.Query["tab"].ToString();
+    if (!string.IsNullOrEmpty(requestTab)) activeTab = requestTab;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-header-title">🏦 Tarjetas</div>
+        <div class="page-header-sub">@Model.Cards.Count tarjeta(s) registrada(s)</div>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCardModal">
+        + Nueva Tarjeta
+    </button>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link @(activeTab != "ciclo" ? "active" : "")" href="?tab=tarjetas">
+            🏦 Mis Tarjetas
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "ciclo" ? "active" : "")" href="?tab=ciclo">
+            📅 Ciclo de Crédito
+        </a>
+    </li>
+</ul>
+
+@if (activeTab == "ciclo")
+{
+    var creditCards = Model.Cards
+        .Where(c => c.Card.CardType == "credito" && c.Card.IsActive && c.NextCutDate.HasValue)
+        .ToList();
+
+    <!-- ── Ciclo de Crédito: KPI Summary ──────────────────────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="kpi-card" style="border-left:4px solid #ef4444">
+                <div class="kpi-label">💳 Por pagar (ciclo cerrado)</div>
+                <div class="kpi-value" style="color:#ef4444">₡ @Model.TotalToPayCrc.ToString("N2")</div>
+                <div class="kpi-sub">Monto ya facturado pendiente de pago</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="kpi-card" style="border-left:4px solid #3b82f6">
+                <div class="kpi-label">📈 Ciclo abierto</div>
+                <div class="kpi-value" style="color:#3b82f6">₡ @Model.TotalOpenCycleCrc.ToString("N2")</div>
+                <div class="kpi-sub">Acumulado en el ciclo actual (aún sin corte)</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="kpi-card" style="border-left:4px solid #8b5cf6">
+                <div class="kpi-label">🏦 Tarjetas activas con ciclo</div>
+                <div class="kpi-value" style="color:#8b5cf6">@Model.ActiveCreditCardsWithCycle</div>
+                <div class="kpi-sub">Tarjetas de crédito con día de corte configurado</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Per-card panels ──────────────────────────────────────────────── -->
+    @if (creditCards.Any())
+    {
+        <div class="row g-4">
+            @foreach (var cs in creditCards)
+            {
+                // Bank-specific gradient
+                var gradientStyle = cs.Card.Bank switch
+                {
+                    "BCR"        => "background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 60%,#3b82f6 100%)",
+                    "BAC"        => "background:linear-gradient(135deg,#5b21b6 0%,#7c3aed 60%,#8b5cf6 100%)",
+                    "BN"         => "background:linear-gradient(135deg,#065f46 0%,#059669 60%,#10b981 100%)",
+                    "BNCR"       => "background:linear-gradient(135deg,#065f46 0%,#059669 60%,#10b981 100%)",
+                    "Davivienda" => "background:linear-gradient(135deg,#991b1b 0%,#dc2626 60%,#ef4444 100%)",
+                    "Promerica"  => "background:linear-gradient(135deg,#92400e 0%,#d97706 60%,#f59e0b 100%)",
+                    _            => "background:linear-gradient(135deg,#1e293b 0%,#334155 60%,#475569 100%)"
+                };
+
+                var days = cs.DaysUntilCut;
+                var daysColor = days <= 3 ? "#ef4444" : days <= 7 ? "#f59e0b" : "#10b981";
+                var daysLabel = days == 0 ? "¡Hoy!" : days == 1 ? "Mañana" : $"{days} días";
+
+                var hasLimit  = cs.Card.CreditLimit.HasValue && cs.Card.CreditLimit > 0;
+                var usagePct  = hasLimit
+                    ? (double)(cs.OpenCycleSpending / cs.Card.CreditLimit!.Value * 100)
+                    : 0.0;
+                var barColor  = usagePct > 80 ? "#ef4444" : usagePct > 50 ? "#f59e0b" : "#10b981";
+
+                var cardLabel = string.IsNullOrWhiteSpace(cs.Card.CardAlias)
+                    ? (cs.Card.Last4 != null ? $"···· {cs.Card.Last4}" : "Tarjeta")
+                    : cs.Card.CardAlias + (cs.Card.Last4 != null ? $" ···· {cs.Card.Last4}" : "");
+
+                <div class="col-lg-6">
+                    <div class="card shadow-sm" style="border:none;border-radius:16px;overflow:hidden">
+
+                        <!-- Gradient header -->
+                        <div style="@gradientStyle;padding:20px 24px 18px;color:#fff;position:relative">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <div style="font-size:20px;font-weight:700;letter-spacing:.5px">@cs.Card.Bank</div>
+                                    <div style="font-size:13px;opacity:.85;margin-top:2px">@cardLabel</div>
+                                </div>
+                                <div style="text-align:right">
+                                    <div style="background:rgba(255,255,255,.18);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600">
+                                        Día @cs.Card.CutDay
+                                    </div>
+                                    <div style="margin-top:8px;font-size:13px;font-weight:700;color:@daysColor;background:rgba(255,255,255,.15);border-radius:20px;padding:3px 10px">
+                                        ⏱ @daysLabel para corte
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Credit usage bar (if limit configured) -->
+                            @if (hasLimit)
+                            {
+                                <div style="margin-top:16px">
+                                    <div class="d-flex justify-content-between" style="font-size:11px;opacity:.85;margin-bottom:4px">
+                                        <span>Uso ciclo abierto vs límite</span>
+                                        <span>@usagePct.ToString("N1")% — Límite: @cs.Card.Currency @cs.Card.CreditLimit!.Value.ToString("N0")</span>
+                                    </div>
+                                    <div style="background:rgba(255,255,255,.25);border-radius:4px;height:7px">
+                                        <div style="background:@barColor;border-radius:4px;height:7px;width:@(Math.Min(100,(int)usagePct))%;transition:width .4s"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Date blocks -->
+                        <div class="row g-0" style="border-bottom:1px solid #f1f5f9">
+                            <div class="col-4 text-center" style="padding:14px 8px;border-right:1px solid #f1f5f9">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:4px">Último corte</div>
+                                <div style="font-size:15px;font-weight:700;color:#0f172a">
+                                    @(cs.LastCutDate?.ToString("dd/MM") ?? "—")
+                                </div>
+                                <div style="font-size:10px;color:#94a3b8">@(cs.LastCutDate?.ToString("yyyy") ?? "")</div>
+                            </div>
+                            <div class="col-4 text-center" style="padding:14px 8px;border-right:1px solid #f1f5f9">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:4px">Fecha de pago</div>
+                                @if (cs.PaymentDueDate.HasValue)
+                                {
+                                    var today2 = DateTime.UtcNow.Date;
+                                    var overdue = cs.PaymentDueDate.Value.Date < today2;
+                                    var dueColor = overdue ? "#ef4444" : "#0f172a";
+                                    <div style="font-size:15px;font-weight:700;color:@dueColor">
+                                        @cs.PaymentDueDate.Value.ToString("dd/MM")
+                                    </div>
+                                    <div style="font-size:10px;color:#94a3b8">@cs.PaymentDueDate.Value.ToString("yyyy")</div>
+                                    @if (overdue)
+                                    {
+                                        <div style="font-size:10px;color:#ef4444;font-weight:600">vencido</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div style="font-size:15px;font-weight:700;color:#94a3b8">—</div>
+                                    <div style="font-size:10px;color:#cbd5e1">sin configurar</div>
+                                }
+                            </div>
+                            <div class="col-4 text-center" style="padding:14px 8px">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:4px">Próximo corte</div>
+                                <div style="font-size:15px;font-weight:700;color:#0f172a">
+                                    @(cs.NextCutDate?.ToString("dd/MM") ?? "—")
+                                </div>
+                                <div style="font-size:10px;color:#94a3b8">@(cs.NextCutDate?.ToString("yyyy") ?? "")</div>
+                            </div>
+                        </div>
+
+                        <!-- Financial blocks: closed cycle + open cycle -->
+                        <div class="row g-0">
+                            <div class="col-6" style="padding:16px 20px;border-right:1px solid #f1f5f9;background:#fff9f9">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#dc2626;margin-bottom:6px">
+                                    💳 Por pagar
+                                </div>
+                                <div style="font-size:22px;font-weight:800;color:#dc2626;line-height:1.1">
+                                    ₡ @cs.LastCycleSpending.ToString("N2")
+                                </div>
+                                <div style="font-size:11px;color:#94a3b8;margin-top:4px">
+                                    Ciclo cerrado · @cs.LastCycleTxCount mov.
+                                </div>
+                                @if (cs.PrevCutDate.HasValue && cs.LastCutDate.HasValue)
+                                {
+                                    <div style="font-size:10px;color:#cbd5e1;margin-top:2px">
+                                        @cs.PrevCutDate.Value.ToString("dd/MM") → @cs.LastCutDate.Value.ToString("dd/MM")
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-6" style="padding:16px 20px;background:#f0f9ff">
+                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#2563eb;margin-bottom:6px">
+                                    📈 Ciclo abierto
+                                </div>
+                                <div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1.1">
+                                    ₡ @cs.OpenCycleSpending.ToString("N2")
+                                </div>
+                                <div style="font-size:11px;color:#94a3b8;margin-top:4px">
+                                    Acumulando · @cs.OpenCycleTxCount mov.
+                                </div>
+                                @if (cs.LastCutDate.HasValue)
+                                {
+                                    <div style="font-size:10px;color:#cbd5e1;margin-top:2px">
+                                        @cs.LastCutDate.Value.ToString("dd/MM") → hoy
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📅</div>
+                    <div class="empty-state-text">No hay tarjetas de crédito con día de corte configurado</div>
+                    <p style="font-size:13px;color:#94a3b8;margin-top:8px">
+                        Agrega una tarjeta de crédito con día de corte y días de pago para ver sus ciclos aquí.
+                    </p>
+                    <a href="?tab=tarjetas" class="btn btn-outline-primary mt-2">🏦 Ver mis tarjetas</a>
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+<style>
+/* ── bc2: compact premium bank card ─────────────────────────────────────── */
+/* Grid: fixed-size cards that wrap, never stretch */
+.bc2-grid{display:flex;flex-wrap:wrap;gap:24px}
+.bc2-wrap{position:relative;flex:0 0 auto;width:340px}
+.bc2{position:relative;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;width:340px;aspect-ratio:1.586/1;box-shadow:0 8px 32px rgba(0,0,0,.22),0 2px 8px rgba(0,0,0,.14)}
+/* Gradients */
+.bc2-bcr  {background:linear-gradient(135deg,#1a3a6e 0%,#1d4ed8 60%,#2563eb 100%)}
+.bc2-bac  {background:linear-gradient(135deg,#3b0764 0%,#6d28d9 58%,#7c3aed 100%)}
+.bc2-bn   {background:linear-gradient(135deg,#052e16 0%,#065f46 52%,#059669 100%)}
+.bc2-bncr {background:linear-gradient(135deg,#052e16 0%,#065f46 52%,#059669 100%)}
+.bc2-davi {background:linear-gradient(135deg,#450a0a 0%,#991b1b 55%,#dc2626 100%)}
+.bc2-prom {background:linear-gradient(135deg,#451a03 0%,#92400e 55%,#d97706 100%)}
+.bc2-cr   {background:linear-gradient(135deg,#0c1445 0%,#1e3a8a 55%,#1d4ed8 100%)}
+.bc2-db   {background:linear-gradient(135deg,#0f172a 0%,#1e293b 52%,#334155 100%)}
+/* Inactive overlay */
+.bc2-overlay{position:absolute;inset:0;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;z-index:10}
+.bc2-overlay-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:700;letter-spacing:.09em;padding:5px 14px;border-radius:20px}
+/* Deco SVG */
+.bc2-deco{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* Body */
+.bc2-body{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:14px 16px 10px}
+/* Top row */
+.bc2-bank{font-size:17px;font-weight:800;color:#fff;letter-spacing:.4px;line-height:1.1}
+.bc2-cur{font-size:10px;color:rgba(255,255,255,.5);font-weight:500;margin-top:1px}
+.bc2-type{font-size:8.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.88);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);padding:3px 8px;border-radius:20px;white-space:nowrap}
+/* Hardware */
+.bc2-hw{display:flex;align-items:center;gap:8px}
+.bc2-chip{width:30px;height:22px;flex-shrink:0;background:linear-gradient(135deg,#c8a96e,#f0d080 40%,#c8a96e 70%,#b8922a);border-radius:4px;display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px}
+.bc2-chip-cell{background:rgba(0,0,0,.18);border-radius:1.5px}
+.bc2-nfc{display:flex;gap:2.5px;align-items:center}
+.bc2-nfc-arc{width:7px;height:12px;border:1.5px solid rgba(255,255,255,.48);border-left:none;border-radius:0 10px 10px 0}
+/* Number */
+.bc2-num{font-size:14px;font-weight:500;color:rgba(255,255,255,.78);letter-spacing:.2em;font-family:'Courier New',monospace}
+.bc2-num strong{color:#fff;font-weight:800}
+/* Footer */
+.bc2-foot{display:flex;align-items:flex-end;justify-content:space-between}
+.bc2-holder-lbl{font-size:7.5px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.42);text-transform:uppercase}
+.bc2-holder-name{font-size:12px;font-weight:600;color:rgba(255,255,255,.86);letter-spacing:.4px;margin-top:2px}
+/* Brand marks */
+.bc2-visa{font-size:15px;font-weight:900;font-style:italic;color:#fff;letter-spacing:-.3px;font-family:'Times New Roman',serif}
+.bc2-mc{display:flex;position:relative;width:34px;height:22px}
+.bc2-mc-l,.bc2-mc-r{position:absolute;width:20px;height:20px;border-radius:50%}
+.bc2-mc-l{background:#eb001b;opacity:.9;left:0;top:1px}
+.bc2-mc-r{background:#f79e1b;opacity:.9;left:10px;top:1px}
+.bc2-amex{font-size:8.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.78);text-align:right;line-height:1.2}
+/* Stats bar */
+.bc2-stats{display:flex;border-top:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.30);flex-shrink:0}
+.bc2-stat{flex:1;padding:7px 8px;text-align:center;border-right:1px solid rgba(255,255,255,.07)}
+.bc2-stat:last-child{border-right:none}
+.bc2-stat-lbl{font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.36);margin-bottom:2px}
+.bc2-stat-val{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.88);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* 3-dot menu */
+.bc2-menu{position:absolute;top:10px;right:10px;z-index:30}
+.bc2-dot{width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;background:rgba(0,0,0,.28);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;line-height:1;padding:0;transition:background .18s}
+.bc2-dot:hover{background:rgba(0,0,0,.48)}
+.bc2-dd{border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:4px 0;min-width:152px}
+.bc2-dd .dropdown-item{font-size:13px;padding:8px 16px;border-radius:6px;margin:1px 4px;width:calc(100% - 8px)}
+</style>
+
+    @if (Model.Cards.Any())
+    {
+        <div class="bc2-grid">
+            @foreach (var cs in Model.Cards)
+            {
+                var cardBrand = cs.Card.CardBrand ?? "";
+                var cardAlias = cs.Card.CardAlias ?? "";
+                var typeLabel = cs.Card.CardType == "credito" ? "CRÉDITO" : "DÉBITO";
+                var isCredit  = cs.Card.CardType == "credito";
+
+                var bc2Cls = cs.Card.Bank switch
+                {
+                    "BCR"        => "bc2-bcr",
+                    "BAC"        => "bc2-bac",
+                    "BN"         => "bc2-bn",
+                    "BNCR"       => "bc2-bncr",
+                    "Davivienda" => "bc2-davi",
+                    "Promerica"  => "bc2-prom",
+                    _ => isCredit ? "bc2-cr" : "bc2-db"
+                };
+
+                var statMonthCrc = "₡" + cs.MonthSpendingCrc.ToString("N0");
+                var statNextCut  = cs.NextCutDate?.ToString("dd/MM") ?? "—";
+                var statPayDate  = cs.PaymentDueDate?.ToString("dd/MM") ?? "—";
+                var statLastDate = cs.LastTransactionDate?.ToString("dd/MM") ?? "—";
+
+                <div class="bc2-wrap">
+
+                        <!-- ═══ CARD FACE ═══ -->
+                        <div class="bc2 @bc2Cls">
+
+                            @if (!cs.Card.IsActive)
+                            {
+                                <div class="bc2-overlay">
+                                    <span class="bc2-overlay-badge">⏸ INACTIVA</span>
+                                </div>
+                            }
+
+                            @* Decorative SVG *@
+                            @if (cs.Card.Bank == "BCR")
+                            {
+                                <svg class="bc2-deco" viewBox="0 0 360 205" preserveAspectRatio="none">
+                                    <circle cx="410" cy="102" r="190" stroke="rgba(255,255,255,.07)" stroke-width="1.5" fill="none"/>
+                                    <circle cx="410" cy="102" r="248" stroke="rgba(255,255,255,.04)" stroke-width="1.5" fill="none"/>
+                                    <line x1="-10" y1="168" x2="370" y2="156" stroke="rgba(220,30,30,.6)" stroke-width="5"/>
+                                </svg>
+                            }
+                            else if (cs.Card.Bank == "BAC")
+                            {
+                                <svg class="bc2-deco" viewBox="0 0 360 205" preserveAspectRatio="none">
+                                    <polygon points="140,0 360,0 360,205 240,205 80,80" fill="rgba(255,255,255,.06)"/>
+                                    <polygon points="290,205 360,128 360,205" fill="rgba(255,255,255,.08)"/>
+                                </svg>
+                            }
+                            else if (cs.Card.Bank == "BN" || cs.Card.Bank == "BNCR")
+                            {
+                                <svg class="bc2-deco" viewBox="0 0 360 205" preserveAspectRatio="none">
+                                    <circle cx="-20" cy="240" r="240" stroke="rgba(255,255,255,.06)" stroke-width="1.5" fill="none"/>
+                                    <circle cx="370" cy="-20" r="185" stroke="rgba(255,255,255,.04)" stroke-width="1.5" fill="none"/>
+                                </svg>
+                            }
+                            else
+                            {
+                                <svg class="bc2-deco" viewBox="0 0 360 205" preserveAspectRatio="none">
+                                    <circle cx="310" cy="38" r="130" stroke="rgba(255,255,255,.05)" stroke-width="1.5" fill="none"/>
+                                    <circle cx="310" cy="38" r="185" stroke="rgba(255,255,255,.03)" stroke-width="1.5" fill="none"/>
+                                </svg>
+                            }
+
+                            <!-- Body -->
+                            <div class="bc2-body">
+                                <!-- Top: bank + type (leave space on right for ⋮ button) -->
+                                <div class="d-flex align-items-start justify-content-between" style="padding-right:30px">
+                                    <div>
+                                        <div class="bc2-bank">@cs.Card.Bank</div>
+                                        <div class="bc2-cur">@cs.Card.Currency</div>
+                                    </div>
+                                    <span class="bc2-type">@typeLabel</span>
+                                </div>
+
+                                <!-- Chip + NFC -->
+                                <div class="bc2-hw">
+                                    <div class="bc2-chip">
+                                        <div class="bc2-chip-cell"></div>
+                                        <div class="bc2-chip-cell"></div>
+                                        <div class="bc2-chip-cell"></div>
+                                        <div class="bc2-chip-cell"></div>
+                                    </div>
+                                    <div class="bc2-nfc">
+                                        <div class="bc2-nfc-arc"></div>
+                                        <div class="bc2-nfc-arc"></div>
+                                        <div class="bc2-nfc-arc"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Card number -->
+                                <div class="bc2-num">
+                                    •••• •••• ••••
+                                    @if (cs.Card.Last4 != null)
+                                    {<strong>@cs.Card.Last4</strong>}
+                                    else
+                                    {<span style="opacity:.35">••••</span>}
+                                </div>
+
+                                <!-- Alias + brand -->
+                                <div class="bc2-foot">
+                                    <div>
+                                        <div class="bc2-holder-lbl">TITULAR</div>
+                                        <div class="bc2-holder-name">@(string.IsNullOrWhiteSpace(cardAlias) ? "—" : cardAlias)</div>
+                                    </div>
+                                    @if (cardBrand == "Visa")
+                                    {<div class="bc2-visa">VISA</div>}
+                                    else if (cardBrand == "Mastercard")
+                                    {<div class="bc2-mc"><div class="bc2-mc-l"></div><div class="bc2-mc-r"></div></div>}
+                                    else if (cardBrand == "Amex")
+                                    {<div class="bc2-amex">AMERICAN<br>EXPRESS</div>}
+                                    else if (!string.IsNullOrWhiteSpace(cardBrand))
+                                    {<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.75);letter-spacing:.4px">@cardBrand</div>}
+                                </div>
+                            </div>
+
+                            <!-- Stats bar (inside card, dark semi-transparent) -->
+                            <div class="bc2-stats">
+                                <div class="bc2-stat">
+                                    <div class="bc2-stat-lbl">Gasto mes</div>
+                                    <div class="bc2-stat-val">@statMonthCrc</div>
+                                </div>
+                                @if (isCredit && cs.NextCutDate.HasValue)
+                                {
+                                    <div class="bc2-stat">
+                                        <div class="bc2-stat-lbl">Próx. corte</div>
+                                        <div class="bc2-stat-val">@statNextCut</div>
+                                    </div>
+                                    <div class="bc2-stat">
+                                        <div class="bc2-stat-lbl">Fecha pago</div>
+                                        <div class="bc2-stat-val">@statPayDate</div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="bc2-stat">
+                                        <div class="bc2-stat-lbl">Movimientos</div>
+                                        <div class="bc2-stat-val">@cs.MonthTransactionCount</div>
+                                    </div>
+                                    <div class="bc2-stat">
+                                        <div class="bc2-stat-lbl">Último uso</div>
+                                        <div class="bc2-stat-val">@statLastDate</div>
+                                    </div>
+                                }
+                            </div>
+
+                        </div><!-- /bc2 -->
+
+                        <!-- 3-dot menu: outside bc2 to avoid overflow:hidden clipping -->
+                        <div class="bc2-menu">
+                            <div class="dropdown">
+                                <button class="bc2-dot" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Opciones">⋮</button>
+                                <ul class="dropdown-menu dropdown-menu-end bc2-dd">
+                                    <li>
+                                        <a class="dropdown-item" href="#"
+                                           onclick="openEditCard(@cs.Card.CardId, '@cs.Card.Bank', '@(cs.Card.CardAlias ?? "")', '@(cs.Card.Last4 ?? "")', '@cs.Card.CardType', '@cs.Card.Currency', @(cs.Card.CutDay?.ToString() ?? "null"), @(cs.Card.PaymentDays?.ToString() ?? "null"), @(cs.Card.CreditLimit?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "null"), '@(cs.Card.CardBrand ?? "")');return false">
+                                            ✏️ Editar
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <form method="post" action="/cards/@cs.Card.CardId/toggle">
+                                            @Html.AntiForgeryToken()
+                                            <button class="dropdown-item" type="submit">
+                                                @(cs.Card.IsActive ? "⏸ Pausar" : "▶ Activar")
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <form method="post" action="/cards/@cs.Card.CardId/delete"
+                                              onsubmit="return confirm('¿Eliminar esta tarjeta? Esta acción no se puede deshacer.')">
+                                            @Html.AntiForgeryToken()
+                                            <button class="dropdown-item text-danger" type="submit">🗑 Eliminar</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div><!-- /bc2-wrap -->
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏦</div>
+                    <div class="empty-state-text">No hay tarjetas registradas</div>
+                    <p style="font-size:13px;color:#94a3b8;margin-top:8px">Agrega tus tarjetas para llevar mejor control de gastos</p>
+                    <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addCardModal">+ Agregar tarjeta</button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<!-- Add Card Modal -->
+<div class="modal fade" id="addCardModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">➕ Nueva Tarjeta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/cards/add">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Banco *</label>
+                            <select name="Bank" class="form-select" required>
+                                <option value="">Seleccionar</option>
+                                @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
+                                {
+                                    <option value="@b">@b</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Tipo</label>
+                            <select name="CardType" id="addCardType" class="form-select"
+                                    onchange="toggleCreditFields('add')">
+                                <option value="credito">Crédito</option>
+                                <option value="debito">Débito</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Alias</label>
+                            <input name="CardAlias" class="form-control" placeholder="Mi VISA oro" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Últimos 4 dígitos</label>
+                            <input name="Last4" class="form-control" maxlength="4" placeholder="1234" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Moneda</label>
+                            <select name="Currency" class="form-select">
+                                <option value="CRC">CRC</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Marca</label>
+                            <select name="CardBrand" class="form-select">
+                                <option value="">Sin marca</option>
+                                <option value="Visa">Visa</option>
+                                <option value="Mastercard">Mastercard</option>
+                                <option value="Amex">American Express</option>
+                                <option value="EFTPOS">EFTPOS</option>
+                                <option value="Dinero">Dinero</option>
+                            </select>
+                        </div>
+                        <!-- Campos solo para crédito -->
+                        <div class="col-12" id="addCreditFields">
+                            <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+                                <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
+                                    Solo tarjeta de crédito
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-4">
+                                        <label class="form-label">Límite</label>
+                                        <input name="CreditLimit" id="addCreditLimit" type="number"
+                                               step="0.01" min="0" class="form-control" placeholder="0.00" />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label">Día de corte</label>
+                                        <input name="CutDay" id="addCutDay" type="number"
+                                               min="1" max="31" class="form-control" placeholder="15" />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label">Días para pago</label>
+                                        <input name="PaymentDays" id="addPayDays" type="number"
+                                               min="1" class="form-control" placeholder="15" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Card Modal -->
+<div class="modal fade" id="editCardModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ Editar Tarjeta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="editCardForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Banco *</label>
+                            <select name="Bank" id="editBank" class="form-select" required>
+                                @foreach (var b in new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" })
+                                {
+                                    <option value="@b">@b</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Tipo</label>
+                            <select name="CardType" id="editCardType" class="form-select"
+                                    onchange="toggleCreditFields('edit')">
+                                <option value="credito">Crédito</option>
+                                <option value="debito">Débito</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Alias</label>
+                            <input name="CardAlias" id="editAlias" class="form-control" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Últimos 4 dígitos</label>
+                            <input name="Last4" id="editLast4" class="form-control" maxlength="4" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Moneda</label>
+                            <select name="Currency" id="editCurrency" class="form-select">
+                                <option value="CRC">CRC</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Marca</label>
+                            <select name="CardBrand" id="editCardBrand" class="form-select">
+                                <option value="">Sin marca</option>
+                                <option value="Visa">Visa</option>
+                                <option value="Mastercard">Mastercard</option>
+                                <option value="Amex">American Express</option>
+                                <option value="EFTPOS">EFTPOS</option>
+                                <option value="Dinero">Dinero</option>
+                            </select>
+                        </div>
+                        <!-- Campos solo para crédito -->
+                        <div class="col-12" id="editCreditFields">
+                            <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+                                <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
+                                    Solo tarjeta de crédito
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-4">
+                                        <label class="form-label">Límite</label>
+                                        <input name="CreditLimit" id="editLimit" type="number"
+                                               step="0.01" min="0" class="form-control" />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label">Día de corte</label>
+                                        <input name="CutDay" id="editCutDay" type="number"
+                                               min="1" max="31" class="form-control" />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label">Días para pago</label>
+                                        <input name="PaymentDays" id="editPayDays" type="number"
+                                               min="1" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// ── Campos condicionales crédito/débito ──────────────────────────────────────
+function toggleCreditFields(prefix) {
+    var typeVal = document.getElementById(prefix + 'CardType').value;
+    var fieldsDiv = document.getElementById(prefix + 'CreditFields');
+    var isCredit = typeVal === 'credito';
+
+    fieldsDiv.style.display = isCredit ? '' : 'none';
+
+    // Deshabilitar inputs para que no se envíen ni validen
+    fieldsDiv.querySelectorAll('input').forEach(function(el) {
+        el.disabled = !isCredit;
+        if (!isCredit) el.value = '';   // limpiar al cambiar a débito
+    });
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    toggleCreditFields('add');
+
+    // Re-evaluar al abrir el modal de agregar
+    document.getElementById('addCardModal').addEventListener('show.bs.modal', function() {
+        toggleCreditFields('add');
+    });
+});
+
+// ── Abrir modal de edición ───────────────────────────────────────────────────
+function openEditCard(id, bank, alias, last4, type, currency, cutDay, payDays, limit, brand) {
+    document.getElementById('editCardForm').action = '/cards/' + id + '/edit';
+
+    // Banco
+    var bankSel = document.getElementById('editBank');
+    for (var i = 0; i < bankSel.options.length; i++) {
+        if (bankSel.options[i].value === bank) { bankSel.selectedIndex = i; break; }
+    }
+
+    // Alias y last4
+    document.getElementById('editAlias').value  = alias  || '';
+    document.getElementById('editLast4').value  = last4  || '';
+
+    // Tipo
+    var typeSel = document.getElementById('editCardType');
+    for (var i = 0; i < typeSel.options.length; i++) {
+        if (typeSel.options[i].value === type) { typeSel.selectedIndex = i; break; }
+    }
+
+    // Moneda
+    var curSel = document.getElementById('editCurrency');
+    for (var i = 0; i < curSel.options.length; i++) {
+        if (curSel.options[i].value === currency) { curSel.selectedIndex = i; break; }
+    }
+
+    // Marca
+    var brandSel = document.getElementById('editCardBrand');
+    brandSel.value = brand || '';
+
+    // Campos de crédito
+    document.getElementById('editCutDay').value  = cutDay  != null ? cutDay  : '';
+    document.getElementById('editPayDays').value = payDays != null ? payDays : '';
+    document.getElementById('editLimit').value   = limit   != null ? limit   : '';
+
+    // Aplicar visibilidad según tipo
+    toggleCreditFields('edit');
+
+    new bootstrap.Modal(document.getElementById('editCardModal')).show();
+}
+</script>
+}

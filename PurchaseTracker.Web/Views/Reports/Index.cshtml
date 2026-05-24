@@ -1,0 +1,540 @@
+@model PurchaseTracker.Web.ViewModels.ReportFilterViewModel
+@{
+    ViewData["Title"] = "Reportes";
+    var banks = ViewBag.Banks as List<string> ?? new List<string>();
+    Func<bool, string?> sel = (cond) => cond ? "selected" : null;
+}
+
+<div class="page-header" style="margin-bottom:20px">
+    <div>
+        <h1 class="page-title">Reportes</h1>
+        <p class="page-subtitle">Seleccioná el tipo de reporte, aplicá filtros y exportá en PDF o Excel</p>
+    </div>
+</div>
+
+<form id="rptForm" method="post" autocomplete="off">
+    @Html.AntiForgeryToken()
+
+    <div class="rpt-card">
+
+        <!-- ══════════════════════════════════════════════════════════════
+             PASO 1 — TIPO DE REPORTE
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="rpt-step">
+            <div class="rpt-step-hdr">
+                <span class="rpt-num">1</span>
+                <span class="rpt-title">Tipo de reporte</span>
+            </div>
+
+            <div class="rpt-source-grid rpt-source-grid-3">
+
+                <label class="rpt-src @(Model.IsMovimientos ? "active" : "")">
+                    <input type="radio" name="ReportSource" value="movimientos"
+                           @(Model.IsMovimientos ? "checked" : "") />
+                    <span class="rpt-src-ico">💳</span>
+                    <div class="rpt-src-body">
+                        <span class="rpt-src-name">Movimientos</span>
+                        <span class="rpt-src-desc">Compras, pagos, retiros y transferencias registradas en tarjetas</span>
+                    </div>
+                    <span class="rpt-src-chk">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                </label>
+
+                <label class="rpt-src @(Model.IsFinanciamientos ? "active" : "")">
+                    <input type="radio" name="ReportSource" value="financiamientos"
+                           @(Model.IsFinanciamientos ? "checked" : "") />
+                    <span class="rpt-src-ico">📋</span>
+                    <div class="rpt-src-body">
+                        <span class="rpt-src-name">Financiamientos</span>
+                        <span class="rpt-src-desc">Cuotas activas, diferidos y compras a plazos registradas</span>
+                    </div>
+                    <span class="rpt-src-chk">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                </label>
+
+                <label class="rpt-src @(Model.IsNotas ? "active" : "")">
+                    <input type="radio" name="ReportSource" value="notas"
+                           @(Model.IsNotas ? "checked" : "") />
+                    <span class="rpt-src-ico">🤝</span>
+                    <div class="rpt-src-body">
+                        <span class="rpt-src-name">Notas / Compartidos</span>
+                        <span class="rpt-src-desc">Deudas personales, cobros y pagos informales</span>
+                    </div>
+                    <span class="rpt-src-chk">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                </label>
+
+            </div>
+        </div>
+
+        <div class="rpt-sep"></div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             PASO 2 — FILTROS
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="rpt-step">
+            <div class="rpt-step-hdr">
+                <span class="rpt-num">2</span>
+                <span class="rpt-title">Filtros</span>
+                <span class="rpt-hint">Todos opcionales — sin filtros incluye el historial completo</span>
+            </div>
+
+            <div class="rpt-filters">
+
+                <!-- Período — aplica a todos -->
+                <div class="rpt-f rpt-f-period" data-for="movimientos financiamientos notas">
+                    <div class="rpt-flabel">Período</div>
+                    <div class="rpt-period-tabs">
+                        <button type="button" class="rpt-ptab active" id="btnMonth">Mes / Año</button>
+                        <button type="button" class="rpt-ptab"        id="btnRange">Rango libre</button>
+                    </div>
+                    <div id="panelMonth" class="rpt-period-inputs">
+                        <select name="Month" class="rpt-sel">
+                            <option value="">Mes</option>
+                            @for (int m = 1; m <= 12; m++)
+                            {
+                                var mn = System.Globalization.CultureInfo.GetCultureInfo("es-CR").DateTimeFormat.GetMonthName(m);
+                                <option value="@m" selected="@sel(Model.Month == m)">@mn</option>
+                            }
+                        </select>
+                        <select name="Year" class="rpt-sel">
+                            <option value="">Año</option>
+                            @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
+                            {
+                                <option value="@y" selected="@sel(Model.Year == y)">@y</option>
+                            }
+                        </select>
+                    </div>
+                    <div id="panelRange" class="rpt-period-inputs" style="display:none">
+                        <input type="date" name="StartDate" class="rpt-sel"
+                               value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                        <input type="date" name="EndDate" class="rpt-sel"
+                               value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+
+                <!-- Banco — solo mov + fin -->
+                <div class="rpt-f" data-for="movimientos financiamientos">
+                    <label class="rpt-flabel">Banco</label>
+                    <select name="Bank" class="rpt-sel">
+                        <option value="">Todos</option>
+                        @foreach (var b in banks)
+                        {
+                            <option value="@b" selected="@sel(Model.Bank == b)">@b</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Moneda — todos -->
+                <div class="rpt-f" data-for="movimientos financiamientos notas">
+                    <label class="rpt-flabel">Moneda</label>
+                    <select name="Currency" class="rpt-sel">
+                        <option value="">Todas</option>
+                        <option value="CRC" selected="@sel(Model.Currency == "CRC")">₡ CRC</option>
+                        <option value="USD" selected="@sel(Model.Currency == "USD")">$ USD</option>
+                    </select>
+                </div>
+
+                <!-- Tarjeta — solo mov + fin -->
+                <div class="rpt-f" data-for="movimientos financiamientos">
+                    <label class="rpt-flabel">Tarjeta</label>
+                    <select name="CardId" class="rpt-sel">
+                        <option value="">Todas</option>
+                        @foreach (var card in Model.Cards)
+                        {
+                            <option value="@card.CardId" selected="@sel(Model.CardId == card.CardId)">@card.DisplayName</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Categoría — mov + notas -->
+                <div class="rpt-f" data-for="movimientos notas">
+                    <label class="rpt-flabel">Categoría</label>
+                    <select name="CategoryId" class="rpt-sel">
+                        <option value="">Todas</option>
+                        @foreach (var cat in Model.Categories)
+                        {
+                            <option value="@cat.CategoryId" selected="@sel(Model.CategoryId == cat.CategoryId)">@cat.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Tipo de movimiento — solo mov -->
+                <div class="rpt-f" data-for="movimientos">
+                    <label class="rpt-flabel">Tipo de movimiento</label>
+                    <select name="MovementType" class="rpt-sel">
+                        <option value="">Todos</option>
+                        <option value="compra"        selected="@sel(Model.MovementType=="compra")">Compra</option>
+                        <option value="retiro"        selected="@sel(Model.MovementType=="retiro")">Retiro ATM</option>
+                        <option value="pago"          selected="@sel(Model.MovementType=="pago")">Pago</option>
+                        <option value="transferencia" selected="@sel(Model.MovementType=="transferencia")">Transferencia</option>
+                        <option value="ajuste"        selected="@sel(Model.MovementType=="ajuste")">Ajuste</option>
+                    </select>
+                </div>
+
+                <!-- Tipo de tarjeta — solo mov -->
+                <div class="rpt-f" data-for="movimientos">
+                    <label class="rpt-flabel">Tipo de tarjeta</label>
+                    <select name="CardType" class="rpt-sel">
+                        <option value="">Todos</option>
+                        <option value="credito" selected="@sel(Model.CardType=="credito")">Crédito</option>
+                        <option value="debito"  selected="@sel(Model.CardType=="debito")">Débito</option>
+                    </select>
+                </div>
+
+                <!-- Persona — solo notas -->
+                <div class="rpt-f" data-for="notas">
+                    <label class="rpt-flabel">Persona</label>
+                    <input type="text" name="Person" class="rpt-sel"
+                           placeholder="Nombre de la persona"
+                           value="@Model.Person" />
+                </div>
+
+                <!-- Dirección — solo notas -->
+                <div class="rpt-f" data-for="notas">
+                    <label class="rpt-flabel">Dirección</label>
+                    <select name="Direction" class="rpt-sel">
+                        <option value="">Todos</option>
+                        <option value="cobrar" selected="@sel(Model.Direction=="cobrar")">Por cobrar (te deben)</option>
+                        <option value="pagar"  selected="@sel(Model.Direction=="pagar")">Por pagar (debés)</option>
+                    </select>
+                </div>
+
+                <!-- Estado — todos -->
+                <div class="rpt-f" data-for="movimientos financiamientos notas">
+                    <label class="rpt-flabel">Estado</label>
+                    <select name="Status" class="rpt-sel" id="selStatus">
+                        <option value="">Todos</option>
+                        <!-- mov + fin -->
+                        <option class="opt-mov-fin" value="Aprobada"  selected="@sel(Model.Status=="Aprobada")">Aprobada</option>
+                        <option class="opt-mov-fin" value="Pendiente" selected="@sel(Model.Status=="Pendiente")">Pendiente</option>
+                        <option class="opt-mov-fin" value="Rechazada" selected="@sel(Model.Status=="Rechazada")">Rechazada</option>
+                        <option class="opt-mov-fin" value="activo"    selected="@sel(Model.Status=="activo")">Activo</option>
+                        <option class="opt-mov-fin" value="pagado"    selected="@sel(Model.Status=="pagado")">Pagado</option>
+                        <!-- notas -->
+                        <option class="opt-nota" value="pendiente" selected="@sel(Model.Status=="pendiente")">Pendiente</option>
+                        <option class="opt-nota" value="parcial"   selected="@sel(Model.Status=="parcial")">Parcial</option>
+                        <option class="opt-nota" value="pagado"    selected="@sel(Model.Status=="pagado" && Model.IsNotas)">Pagado</option>
+                    </select>
+                </div>
+
+            </div><!-- /rpt-filters -->
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             PASO 3 — EXPORTAR
+        ═══════════════════════════════════════════════════════════════ -->
+        <div class="rpt-action-bar">
+            <div class="rpt-action-left">
+                <span class="rpt-num rpt-num-dim">3</span>
+                <span class="rpt-action-label">Descargar reporte como</span>
+            </div>
+            <div class="rpt-btns">
+                <button type="submit" formaction="/reports/pdf" class="rpt-btn rpt-pdf">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    Descargar PDF
+                </button>
+                <button type="submit" formaction="/reports/excel" class="rpt-btn rpt-xls">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <line x1="3"  y1="9"  x2="21" y2="9"/>
+                        <line x1="3"  y1="15" x2="21" y2="15"/>
+                        <line x1="9"  y1="3"  x2="9"  y2="21"/>
+                    </svg>
+                    Descargar Excel
+                </button>
+            </div>
+        </div>
+
+    </div><!-- /rpt-card -->
+</form>
+
+@section Styles {
+<style>
+/* ════════════════════════════════════════════════════════════════
+   REPORTES — layout compacto, 3 pasos, sin preview en vivo
+════════════════════════════════════════════════════════════════ */
+
+.rpt-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    overflow: hidden;
+}
+.rpt-sep {
+    height: 1px;
+    background: var(--border-color);
+}
+.rpt-step {
+    padding: 20px 24px;
+}
+
+/* Step header */
+.rpt-step-hdr {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.rpt-num {
+    width: 22px; height: 22px;
+    background: var(--accent-blue);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 11px; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.rpt-num-dim {
+    background: rgba(59,130,246,.18);
+    color: var(--accent-blue);
+}
+.rpt-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--text-primary);
+}
+.rpt-hint {
+    font-size: 11px; color: var(--text-muted);
+}
+
+/* ── Tipo de reporte — radio cards ─────────────────────────── */
+.rpt-source-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.rpt-source-grid-3 { grid-template-columns: repeat(3, 1fr); }
+@@media (max-width:760px) { .rpt-source-grid-3 { grid-template-columns: 1fr 1fr; } }
+@@media (max-width:480px) { .rpt-source-grid, .rpt-source-grid-3 { grid-template-columns: 1fr; } }
+
+.rpt-src {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border-color);
+    cursor: pointer;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+    position: relative;
+}
+.rpt-src input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
+.rpt-src:hover {
+    border-color: var(--accent-blue);
+    background: rgba(59,130,246,.04);
+}
+.rpt-src.active {
+    border-color: var(--accent-blue);
+    background: rgba(59,130,246,.09);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+}
+.rpt-src-ico  { font-size: 22px; flex-shrink: 0; }
+.rpt-src-body { display: flex; flex-direction: column; gap: 2px; }
+.rpt-src-name { font-size: 13px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.rpt-src-desc { font-size: 11px; color: var(--text-muted); }
+.rpt-src-chk {
+    margin-left: auto;
+    width: 20px; height: 20px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    opacity: 0;
+    transform: scale(.5);
+    transition: opacity .15s, transform .15s;
+}
+.rpt-src.active .rpt-src-chk { opacity: 1; transform: scale(1); }
+
+/* ── Filtros ────────────────────────────────────────────────── */
+.rpt-filters {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px 16px;
+}
+@@media (max-width:960px) { .rpt-filters { grid-template-columns: repeat(3,1fr); } }
+@@media (max-width:640px) { .rpt-filters { grid-template-columns: repeat(2,1fr); } }
+@@media (max-width:400px) { .rpt-filters { grid-template-columns: 1fr; } }
+
+.rpt-f { display: flex; flex-direction: column; gap: 5px; }
+.rpt-f-period { grid-column: span 1; }
+
+.rpt-flabel {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .7px; text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* Period tabs */
+.rpt-period-tabs {
+    display: flex; gap: 2px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 7px; padding: 2px;
+    margin-bottom: 6px;
+}
+.rpt-ptab {
+    flex: 1; padding: 5px; border-radius: 5px;
+    border: none; background: transparent;
+    font-size: 10px; font-weight: 600;
+    color: var(--text-muted); cursor: pointer; transition: all .13s;
+}
+.rpt-ptab.active { background: var(--accent-blue); color: #fff; font-weight: 700; }
+
+.rpt-period-inputs { display: flex; gap: 6px; }
+.rpt-period-inputs .rpt-sel { flex: 1; min-width: 0; }
+
+/* Select */
+.rpt-sel {
+    width: 100%; padding: 7px 9px; height: 34px;
+    border-radius: 8px; border: 1px solid var(--border-color);
+    background: var(--input-bg); color: var(--text-primary);
+    font-size: 12px; transition: border-color .13s, box-shadow .13s;
+}
+.rpt-sel:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+
+/* Hide/show filters per report type */
+.rpt-f-hidden {
+    display: none !important;
+}
+
+/* ── Action bar ─────────────────────────────────────────────── */
+.rpt-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 24px;
+    background: var(--sidebar-bg, #090c14);
+    border-top: 1px solid var(--border-color);
+}
+.rpt-action-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.rpt-action-label {
+    font-size: 13px; font-weight: 600;
+    color: var(--text-muted);
+}
+.rpt-btns { display: flex; gap: 8px; }
+
+.rpt-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 10px; border: none;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all .17s; white-space: nowrap;
+}
+.rpt-pdf {
+    background: linear-gradient(135deg,#dc2626,#991b1b);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(220,38,38,.2);
+}
+.rpt-pdf:hover {
+    background: linear-gradient(135deg,#b91c1c,#7f1d1d);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 18px rgba(220,38,38,.38);
+}
+.rpt-xls {
+    background: linear-gradient(135deg,#16a34a,#15803d);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(22,163,74,.2);
+}
+.rpt-xls:hover {
+    background: linear-gradient(135deg,#15803d,#14532d);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 18px rgba(22,163,74,.38);
+}
+
+@@media (max-width:640px) {
+    .rpt-action-bar  { flex-direction: column; align-items: stretch; }
+    .rpt-action-left { justify-content: center; }
+    .rpt-btns        { flex-direction: column; }
+    .rpt-btn         { justify-content: center; }
+}
+</style>
+}
+
+@section Scripts {
+<script>
+(function () {
+    const srcCards = document.querySelectorAll('.rpt-src');
+    const filters  = document.querySelectorAll('.rpt-filters [data-for]');
+    const selStatus = document.getElementById('selStatus');
+    const btnMonth  = document.getElementById('btnMonth');
+    const btnRange  = document.getElementById('btnRange');
+    const pMonth    = document.getElementById('panelMonth');
+    const pRange    = document.getElementById('panelRange');
+
+    // ── Radio cards → click ───────────────────────────────────────────────
+    srcCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const radio = card.querySelector('input[type=radio]');
+            if (radio) { radio.checked = true; updateSource(); }
+        });
+    });
+
+    function updateSource() {
+        const val = document.querySelector('input[name="ReportSource"]:checked')?.value
+                 ?? 'movimientos';
+
+        // Active state on cards
+        srcCards.forEach(c => {
+            const r = c.querySelector('input[type=radio]');
+            c.classList.toggle('active', r?.value === val);
+        });
+
+        // Show/hide filters based on data-for
+        filters.forEach(el => {
+            const sources = (el.dataset.for || '').split(' ');
+            const show    = sources.includes(val);
+            el.classList.toggle('rpt-f-hidden', !show);
+            // Reset hidden inputs/selects so they don't pollute the form
+            if (!show) {
+                el.querySelectorAll('select').forEach(s => s.value = '');
+                el.querySelectorAll('input[type=text], input[type=date]')
+                  .forEach(i => i.value = '');
+            }
+        });
+
+        // Status options: show only relevant group
+        const isNota = val === 'notas';
+        selStatus.querySelectorAll('.opt-mov-fin').forEach(o =>
+            o.style.display = isNota ? 'none' : '');
+        selStatus.querySelectorAll('.opt-nota').forEach(o =>
+            o.style.display = isNota ? '' : 'none');
+        // Reset value when switching to avoid stale selection
+        selStatus.value = '';
+    }
+
+    // Init on load
+    updateSource();
+
+    // ── Period tabs ───────────────────────────────────────────────────────
+    btnMonth.addEventListener('click', () => setMode('month'));
+    btnRange.addEventListener('click', () => setMode('range'));
+
+    function setMode(mode) {
+        const m = mode === 'month';
+        btnMonth.classList.toggle('active', m);
+        btnRange.classList.toggle('active', !m);
+        pMonth.style.display = m  ? '' : 'none';
+        pRange.style.display = !m ? '' : 'none';
+        if (m)  pRange.querySelectorAll('input').forEach(i => i.value = '');
+        else    pMonth.querySelectorAll('select').forEach(s => s.value = '');
+    }
+})();
+</script>
+}

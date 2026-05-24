@@ -1,0 +1,28 @@
+@model PurchaseTracker.Web.Services.ExchangeRateData
+@* Topbar pill — tipo de cambio USD/CRC *@
+
+@if (Model.IsError)
+{
+    @* Fallo silencioso: solo un indicador discreto *@
+    <div class="er-pill er-pill--offline" title="Tipo de cambio no disponible">
+        <span class="er-icon">💱</span>
+        <span class="er-offline">USD —</span>
+    </div>
+}
+else
+{
+    var updLabel = Model.Updated ?? Model.VentaDate ?? "";
+    <div class="er-pill" title="Tipo de cambio BCCR · @updLabel">
+        <span class="er-icon">💱</span>
+        <div class="er-rates">
+            <div class="er-rate-row">
+                <span class="er-label">C</span>
+                <span class="er-value">₡@Model.Compra.ToString("N2")</span>
+            </div>
+            <div class="er-rate-row">
+                <span class="er-label">V</span>
+                <span class="er-value">₡@Model.Venta.ToString("N2")</span>
+            </div>
+        </div>
+    </div>
+}

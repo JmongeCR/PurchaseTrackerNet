@@ -1,0 +1,254 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="antiforgery-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " — PurchaseTracker" : "PurchaseTracker")</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1e40af" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PurchaseTracker" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+
+@if (User.Identity?.IsAuthenticated == true)
+{
+    var initials = string.Concat(
+        (User.Identity?.Name ?? "U")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(w => char.ToUpper(w[0]))
+    );
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- SIDEBAR -->
+    <nav id="sidebar">
+        <div class="sidebar-brand">
+            <a href="/" class="brand-logo">
+                <div class="brand-icon">PT</div>
+                <div class="brand-text">
+                    <span class="brand-name">PurchaseTracker</span>
+                    <span class="brand-tagline">Control financiero</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="sidebar-nav">
+
+        @if (User.IsInRole("admin"))
+        {
+            <!-- ADMINISTRADOR: solo ve su sección -->
+            <div class="nav-section-label">Sistema</div>
+            <ul class="nav flex-column nav-section">
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Admin" ? "active" : "")" href="/admin">
+                        <span class="nav-icon">🛡️</span>
+                        <span class="nav-text">Usuarios</span>
+                    </a>
+                </li>
+            </ul>
+        }
+        else
+        {
+            <!-- USUARIO NORMAL: ve todas las secciones -->
+
+            <!-- PRINCIPAL -->
+            <div class="nav-section-label">Principal</div>
+            <ul class="nav flex-column nav-section">
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Dashboard" ? "active" : "")" href="/">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- FINANZAS -->
+
+            <div class="nav-section-label">Finanzas</div>
+            <ul class="nav flex-column nav-section">
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Transactions" ? "active" : "")" href="/transactions">
+                        <span class="nav-icon">💳</span>
+                        <span class="nav-text">Movimientos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Cards" ? "active" : "")" href="/cards">
+                        <span class="nav-icon">🏦</span>
+                        <span class="nav-text">Tarjetas</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Financing" ? "active" : "")" href="/financing">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Financiamientos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Notes" ? "active" : "")" href="/notes">
+                        <span class="nav-icon">📝</span>
+                        <span class="nav-text">Notas</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Subscriptions" ? "active" : "")" href="/subscriptions">
+                        <span class="nav-icon">🔄</span>
+                        <span class="nav-text">Suscripciones</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- ANÁLISIS -->
+            <div class="nav-section-label">Análisis</div>
+            <ul class="nav flex-column nav-section">
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "ExchangeRate" ? "active" : "")" href="/exchange">
+                        <span class="nav-icon">💱</span>
+                        <span class="nav-text">Tipo de Cambio</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Reports" ? "active" : "")" href="/reports">
+                        <span class="nav-icon">📄</span>
+                        <span class="nav-text">Reportes</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- CUENTA -->
+            <div class="nav-section-label">Cuenta</div>
+            <ul class="nav flex-column nav-section">
+                <li class="nav-item">
+                    <a class="nav-link @(currentController == "Settings" ? "active" : "")" href="/settings">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">Configuración</span>
+                    </a>
+                </li>
+            </ul>
+        }
+
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar">@initials</div>
+                <div class="user-info">
+                    <div class="user-name">@User.Identity?.Name</div>
+                    <div class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</div>
+                </div>
+            </div>
+            <form method="post" action="/auth/logout">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-logout">
+                    <span>🚪</span> Cerrar sesión
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div id="main-content">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="d-flex align-items-center gap-3">
+                <button class="sidebar-toggle hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+                <span class="topbar-title">@(ViewData["Title"] ?? "Dashboard")</span>
+            </div>
+            <div class="topbar-actions">
+                @if (User.Identity?.IsAuthenticated == true && !User.IsInRole("admin"))
+                {
+                    @await Component.InvokeAsync("ExchangeRate")
+                }
+                <div class="topbar-user">
+                    <div class="user-avatar" style="width:28px;height:28px;font-size:11px">@initials</div>
+                    <span class="topbar-user-name d-none d-sm-inline">@User.Identity?.Name</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash messages -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="flash-messages">
+                <div class="alert alert-success alert-dismissible" role="alert">
+                    ✅ @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="flash-messages">
+                <div class="alert alert-danger alert-dismissible" role="alert">
+                    ❌ @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        }
+
+        <!-- Page content -->
+        <div class="page-content">
+            @RenderBody()
+        </div>
+    </div>
+}
+else
+{
+    @RenderBody()
+}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('show');
+    }
+
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar-overlay').classList.remove('show');
+    }
+
+    // Auto-dismiss flash messages after 5s
+    setTimeout(() => {
+        document.querySelectorAll('.flash-messages .alert').forEach(el => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(el);
+            bsAlert.close();
+        });
+    }, 5000);
+
+    // ── Service Worker registration ──────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+                .catch(err => console.warn('[SW] Registration failed:', err));
+        });
+    }
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

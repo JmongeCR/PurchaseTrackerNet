@@ -1,0 +1,276 @@
+@model SettingsViewModel
+@{
+    ViewData["Title"] = "Configuración";
+}
+
+<div class="page-header">
+    <div class="page-header-title">⚙️ Configuración</div>
+</div>
+
+@if (TempData["PwSuccess"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+        ✅ @TempData["PwSuccess"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["PwError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+        ⚠️ @TempData["PwError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- Settings Form -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">🔔 Preferencias generales</div>
+            <div class="card-body">
+                <!-- User info (read-only) -->
+                <div class="mb-4 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+                    <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Usuario</div>
+                    <div style="font-weight:600;font-size:14px">@Model.UserFullName</div>
+                    <div style="font-size:13px;color:#64748b">@Model.UserEmail</div>
+                </div>
+
+                <form method="post" action="/settings/save">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="UserSettingsId" value="@Model.Settings.UserSettingsId" />
+                    <input type="hidden" name="UserId" value="@Model.Settings.UserId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Zona horaria</label>
+                        <select name="Timezone" class="form-select">
+                            <option value="America/Costa_Rica" selected="@(Model.Settings.Timezone == "America/Costa_Rica")">America/Costa_Rica (CST)</option>
+                            <option value="America/New_York" selected="@(Model.Settings.Timezone == "America/New_York")">America/New_York (EST)</option>
+                            <option value="America/Chicago" selected="@(Model.Settings.Timezone == "America/Chicago")">America/Chicago (CST)</option>
+                            <option value="UTC" selected="@(Model.Settings.Timezone == "UTC")">UTC</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Moneda predeterminada</label>
+                        <select name="DefaultCurrency" class="form-select">
+                            <option value="CRC" selected="@(Model.Settings.DefaultCurrency == "CRC")">CRC — Colón costarricense</option>
+                            <option value="USD" selected="@(Model.Settings.DefaultCurrency == "USD")">USD — Dólar americano</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Correo fuente</label>
+                        <input name="EmailSource" value="@Model.Settings.EmailSource" type="email" class="form-control" placeholder="tu@gmail.com" />
+                        <div style="font-size:11px;color:#94a3b8;margin-top:4px">Correo donde el banco envía notificaciones (referencia)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Telegram Chat ID</label>
+                        <input name="TelegramChatId" value="@Model.Settings.TelegramChatId" class="form-control" placeholder="Ej: 123456789" />
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input name="TelegramEnabled" type="checkbox" class="form-check-input" role="switch"
+                                   id="telegramEnabled" @(Model.Settings.TelegramEnabled ? "checked" : "") value="true" />
+                            <input name="TelegramEnabled" type="hidden" value="false" />
+                            <label class="form-check-label" for="telegramEnabled">Habilitar Telegram</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input name="NotificationsEnabled" type="checkbox" class="form-check-input" role="switch"
+                                   id="notifEnabled" @(Model.Settings.NotificationsEnabled ? "checked" : "") value="true" />
+                            <input name="NotificationsEnabled" type="hidden" value="false" />
+                            <label class="form-check-label" for="notifEnabled">Habilitar notificaciones</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">💾 Guardar configuración</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card mt-4">
+            <div class="card-header">🔒 Cambiar contraseña</div>
+            <div class="card-body">
+                <form method="post" action="/settings/change-password" id="changePwForm">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña actual</label>
+                        <div class="input-group">
+                            <input name="CurrentPassword" type="password" id="currentPw"
+                                   class="form-control" required placeholder="••••••••" autocomplete="current-password" />
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePw('currentPw',this)">👁</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nueva contraseña</label>
+                        <div class="input-group">
+                            <input name="NewPassword" type="password" id="newPw"
+                                   class="form-control" required placeholder="Mínimo 8 caracteres" autocomplete="new-password"
+                                   oninput="checkPwMatch()" />
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePw('newPw',this)">👁</button>
+                        </div>
+                        <div id="pwStrength" style="font-size:11px;margin-top:4px;color:#94a3b8"></div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Confirmar nueva contraseña</label>
+                        <div class="input-group">
+                            <input name="ConfirmPassword" type="password" id="confirmPw"
+                                   class="form-control" required placeholder="Repite la nueva contraseña" autocomplete="new-password"
+                                   oninput="checkPwMatch()" />
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePw('confirmPw',this)">👁</button>
+                        </div>
+                        <div id="pwMatchMsg" style="font-size:11px;margin-top:4px"></div>
+                    </div>
+                    <button type="submit" class="btn btn-danger" id="changePwBtn">🔒 Cambiar contraseña</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span>🏷️ Categorías (@Model.Categories.Count)</span>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addCatModal">
+                    + Nueva
+                </button>
+            </div>
+            <div class="card-body">
+                @if (Model.Categories.Any())
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var cat in Model.Categories)
+                        {
+                            <div class="d-flex align-items-center gap-1 px-3 py-2 rounded"
+                                 style="background:@(cat.Color)22;border:1.5px solid @cat.Color">
+                                <span style="font-size:15px">@cat.IconEmoji</span>
+                                <span style="font-size:13px;font-weight:500;color:@cat.Color">@cat.Name</span>
+                                <form method="post" action="/settings/categories/delete/@cat.CategoryId"
+                                      onsubmit="return confirm('¿Eliminar categoría «@cat.Name»?')" class="ms-1">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" style="background:none;border:none;color:#94a3b8;padding:0;line-height:1;font-size:13px;cursor:pointer">✕</button>
+                                </form>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏷️</div>
+                        <div class="empty-state-text">Sin categorías. ¡Crea la primera!</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCatModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">➕ Nueva Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/settings/categories/add">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre *</label>
+                            <input name="Name" class="form-control" required placeholder="Ej: Comida" maxlength="100" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Color</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input name="Color" id="catColor" type="color" class="form-control form-control-color"
+                                       value="#6366f1" style="width:50px;height:38px;padding:2px;border-radius:6px" />
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var color in new[] { "#6366f1", "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#ec4899", "#f97316", "#64748b" })
+                                    {
+                                        <div onclick="document.getElementById('catColor').value='@color'"
+                                             style="width:24px;height:24px;border-radius:50%;background:@color;cursor:pointer;border:2px solid transparent;transition:transform .1s"
+                                             onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Icono</label>
+                            <div class="icon-grid" id="iconGrid">
+                                @foreach (var kvp in PurchaseTracker.Shared.Entities.Category.AllIcons)
+                                {
+                                    <div class="icon-option @(kvp.Key == "tag" ? "selected" : "")"
+                                         onclick="selectIcon('@kvp.Key', this)"
+                                         title="@kvp.Key">
+                                        @kvp.Value
+                                    </div>
+                                }
+                            </div>
+                            <input type="hidden" name="Icon" id="selectedIcon" value="tag" />
+                            <div style="font-size:12px;color:#94a3b8;margin-top:6px">
+                                Seleccionado: <span id="selectedIconDisplay">🏷️ tag</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar categoría</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function selectIcon(key, el) {
+    document.querySelectorAll('.icon-option').forEach(function(e) { e.classList.remove('selected'); });
+    el.classList.add('selected');
+    document.getElementById('selectedIcon').value = key;
+    document.getElementById('selectedIconDisplay').textContent = el.textContent.trim() + ' ' + key;
+}
+
+function togglePw(id, btn) {
+    var inp = document.getElementById(id);
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+function checkPwMatch() {
+    var nv = document.getElementById('newPw').value;
+    var cv = document.getElementById('confirmPw').value;
+    var msg = document.getElementById('pwMatchMsg');
+    var btn = document.getElementById('changePwBtn');
+    var str = document.getElementById('pwStrength');
+
+    // Strength indicator
+    if (nv.length === 0) { str.textContent = ''; }
+    else if (nv.length < 8)  { str.textContent = '⚠️ Muy corta (mínimo 8 caracteres)'; str.style.color = '#ef4444'; }
+    else if (nv.length < 12) { str.textContent = '🟡 Aceptable'; str.style.color = '#f59e0b'; }
+    else                      { str.textContent = '🟢 Fuerte'; str.style.color = '#16a34a'; }
+
+    // Match check
+    if (cv.length === 0) { msg.textContent = ''; btn.disabled = false; return; }
+    if (nv === cv) {
+        msg.textContent = '✅ Las contraseñas coinciden';
+        msg.style.color = '#16a34a';
+        btn.disabled = false;
+    } else {
+        msg.textContent = '❌ No coinciden';
+        msg.style.color = '#ef4444';
+        btn.disabled = true;
+    }
+}
+</script>
+}
