@@ -1,0 +1,1077 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>PurchaseTracker — Control financiero inteligente</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>"/>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+@@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:    #03080F;
+  --navy2:   #060E1C;
+  --navy3:   #0A1628;
+  --navy4:   #0F1F3A;
+  --blue:    #2563EB;
+  --blue2:   #3B82F6;
+  --indigo:  #6366F1;
+  --cyan:    #06B6D4;
+  --green:   #10B981;
+  --amber:   #F59E0B;
+  --red:     #EF4444;
+  --white:   #F8FAFC;
+  --gray:    #94A3B8;
+  --gray2:   #64748B;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --glass:   rgba(255,255,255,0.04);
+  --glass2:  rgba(255,255,255,0.08);
+}
+html{color-scheme:dark;scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--navy);
+  color:var(--white);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{text-decoration:none;color:inherit}
+
+/* ── Background mesh ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% -10%, rgba(37,99,235,.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 10% 80%,  rgba(99,102,241,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 90% 70%,  rgba(6,182,212,.08)  0%, transparent 50%);
+  pointer-events:none;z-index:0;
+}
+
+/* ══════════════════════════════════════
+   NAVBAR
+══════════════════════════════════════ */
+nav{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 48px;
+  background:rgba(3,8,15,.7);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--border);
+}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.nav-icon{
+  width:34px;height:34px;border-radius:10px;
+  background:linear-gradient(135deg,#2563EB,#6366F1);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 1px rgba(99,102,241,.4),0 4px 16px rgba(37,99,235,.4);
+  flex-shrink:0;
+}
+.nav-icon svg{width:17px;height:17px;color:#fff}
+.nav-brand-text{font-size:16px;font-weight:700;letter-spacing:-.02em}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-link{
+  padding:7px 14px;border-radius:7px;
+  font-size:14px;color:var(--gray);font-weight:500;
+  transition:color .15s,background .15s;
+}
+.nav-link:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-cta{display:flex;align-items:center;gap:10px}
+.btn-ghost{
+  padding:8px 18px;border-radius:8px;
+  font-size:14px;font-weight:600;color:var(--gray);
+  background:transparent;border:1px solid var(--border2);
+  cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.btn-ghost:hover{color:var(--white);border-color:rgba(255,255,255,.25);background:var(--glass2)}
+.btn-primary{
+  padding:9px 22px;border-radius:8px;
+  font-size:14px;font-weight:600;color:#fff;
+  background:linear-gradient(135deg,#2563EB,#6366F1);
+  border:none;cursor:pointer;font-family:inherit;
+  box-shadow:0 0 0 1px rgba(99,102,241,.4),0 4px 16px rgba(37,99,235,.35),inset 0 1px 0 rgba(255,255,255,.15);
+  transition:all .18s;
+}
+.btn-primary:hover{
+  transform:translateY(-1px);
+  box-shadow:0 0 0 1px rgba(99,102,241,.5),0 8px 28px rgba(37,99,235,.5),inset 0 1px 0 rgba(255,255,255,.15);
+}
+
+/* ══════════════════════════════════════
+   HERO
+══════════════════════════════════════ */
+.hero{
+  position:relative;z-index:1;
+  display:flex;align-items:center;
+  max-width:1200px;margin:0 auto;
+  padding:100px 48px 80px;
+  gap:64px;
+}
+.hero-text{flex:1;min-width:0}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:99px;
+  background:rgba(37,99,235,.12);
+  border:1px solid rgba(37,99,235,.25);
+  font-size:12.5px;font-weight:600;color:#60A5FA;
+  margin-bottom:28px;
+}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:#3B82F6;animation:pulse 2s infinite}
+@@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.4)}}
+.hero h1{
+  font-size:clamp(38px,5vw,64px);
+  font-weight:900;line-height:1.08;
+  letter-spacing:-.04em;
+  color:var(--white);
+  margin-bottom:22px;
+}
+.hero h1 span{
+  background:linear-gradient(135deg,#60A5FA 0%,#818CF8 40%,#34D399 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{
+  font-size:18px;color:var(--gray);
+  line-height:1.65;max-width:480px;margin-bottom:38px;
+  font-weight:400;
+}
+.hero-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.btn-hero-primary{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:14px 28px;border-radius:10px;
+  font-size:15px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#2563EB 0%,#6366F1 100%);
+  border:none;cursor:pointer;font-family:inherit;
+  box-shadow:0 0 0 1px rgba(99,102,241,.4),0 8px 32px rgba(37,99,235,.4),inset 0 1px 0 rgba(255,255,255,.15);
+  transition:all .2s;
+}
+.btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(99,102,241,.5),0 16px 48px rgba(37,99,235,.55),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-hero-primary svg{width:16px;height:16px}
+.btn-hero-ghost{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:14px 24px;border-radius:10px;
+  font-size:15px;font-weight:600;color:var(--gray);
+  background:transparent;border:1px solid var(--border2);
+  cursor:pointer;font-family:inherit;transition:all .18s;
+}
+.btn-hero-ghost:hover{color:var(--white);border-color:rgba(255,255,255,.25);background:var(--glass2)}
+.btn-hero-ghost svg{width:15px;height:15px}
+.hero-trust{
+  display:flex;align-items:center;gap:16px;
+  margin-top:28px;flex-wrap:wrap;
+}
+.hero-trust-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--gray2)}
+.hero-trust-item svg{width:14px;height:14px;color:var(--green)}
+
+/* ── Hero Mockup ── */
+.hero-mockup{flex:0 0 440px;position:relative}
+.mockup-glow{
+  position:absolute;inset:-40px;
+  background:radial-gradient(ellipse at 50% 50%,rgba(37,99,235,.2) 0%,transparent 70%);
+  pointer-events:none;
+}
+.mockup-card{
+  position:relative;z-index:1;
+  background:linear-gradient(135deg,rgba(15,31,58,.9) 0%,rgba(10,22,40,.95) 100%);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06),inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(20px);
+}
+.mockup-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02);
+}
+.mockup-dots{display:flex;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%}
+.dot-r{background:#FF5F57}.dot-y{background:#FEBC2E}.dot-g{background:#28C840}
+.mockup-title{font-size:12px;font-weight:600;color:var(--gray2)}
+.mockup-body{padding:20px 18px}
+/* Balance card inside mockup */
+.m-balance{
+  background:linear-gradient(135deg,#1D4ED8 0%,#6366F1 100%);
+  border-radius:14px;padding:18px 20px;margin-bottom:16px;
+  position:relative;overflow:hidden;
+}
+.m-balance::before{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:100px;height:100px;border-radius:50%;
+  background:rgba(255,255,255,.06);
+}
+.m-balance::after{
+  content:'';position:absolute;bottom:-20px;left:20px;
+  width:70px;height:70px;border-radius:50%;
+  background:rgba(255,255,255,.04);
+}
+.m-bal-label{font-size:10px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.m-bal-amount{font-size:28px;font-weight:800;color:#fff;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.m-bal-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:4px}
+.m-bal-row{display:flex;justify-content:space-between;align-items:flex-end}
+.m-bal-chip{
+  background:rgba(255,255,255,.15);border-radius:6px;
+  padding:4px 10px;font-size:11px;font-weight:600;color:rgba(255,255,255,.9);
+  display:flex;align-items:center;gap:5px;
+}
+.m-bal-chip svg{width:11px;height:11px}
+/* KPIs */
+.m-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.m-kpi{
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:11px;padding:12px 14px;
+}
+.m-kpi-label{font-size:9.5px;font-weight:600;color:var(--gray2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.m-kpi-val{font-size:17px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+/* Transactions */
+.m-tx-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.m-tx-title{font-size:11px;font-weight:700;color:var(--white)}
+.m-tx-link{font-size:10px;color:#60A5FA;font-weight:600}
+.m-tx{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.m-tx:last-child{border-bottom:none}
+.m-tx-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.m-tx-name{font-size:11.5px;font-weight:600;color:var(--white);line-height:1.2}
+.m-tx-date{font-size:10px;color:var(--gray2)}
+.m-tx-amt{margin-left:auto;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.m-tx-amt.neg{color:#F87171}.m-tx-amt.pos{color:#34D399}
+
+/* ══════════════════════════════════════
+   TRUST BAR
+══════════════════════════════════════ */
+.trust-bar{
+  position:relative;z-index:1;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  background:rgba(6,14,28,.5);
+  padding:28px 48px;
+}
+.trust-inner{
+  max-width:1200px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:24px;
+}
+.trust-stat{text-align:center}
+.trust-num{font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--white)}
+.trust-num span{
+  background:linear-gradient(135deg,#60A5FA,#818CF8);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.trust-label{font-size:13px;color:var(--gray);margin-top:3px}
+
+/* ══════════════════════════════════════
+   SECTION COMMON
+══════════════════════════════════════ */
+section{position:relative;z-index:1}
+.section-inner{max-width:1200px;margin:0 auto;padding:0 48px}
+.section-tag{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 13px;border-radius:99px;
+  background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);
+  font-size:12px;font-weight:700;color:#818CF8;
+  text-transform:uppercase;letter-spacing:.07em;
+  margin-bottom:16px;
+}
+.section-tag svg{width:12px;height:12px}
+.section-h{font-size:clamp(28px,3.5vw,42px);font-weight:800;line-height:1.15;letter-spacing:-.03em;color:var(--white);margin-bottom:14px}
+.section-h span{
+  background:linear-gradient(135deg,#60A5FA,#818CF8);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.section-sub{font-size:16px;color:var(--gray);line-height:1.7;max-width:560px}
+
+/* ══════════════════════════════════════
+   FEATURES
+══════════════════════════════════════ */
+.features{padding:100px 0}
+.features-head{text-align:center;margin-bottom:60px}
+.features-head .section-sub{margin:0 auto}
+.features-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:20px;
+}
+.feat-card{
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:32px 28px;
+  position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+  backdrop-filter:blur(16px);
+}
+.feat-card::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,var(--feat-color,#6366F1) 50%,transparent 100%);
+  opacity:.5;
+}
+.feat-card::after{
+  content:'';position:absolute;
+  top:-60px;right:-60px;width:160px;height:160px;
+  border-radius:50%;
+  background:radial-gradient(circle,var(--feat-glow,rgba(99,102,241,.12)) 0%,transparent 70%);
+}
+.feat-card:hover{
+  border-color:rgba(255,255,255,.15);
+  transform:translateY(-4px);
+  box-shadow:0 20px 60px rgba(0,0,0,.4);
+}
+.feat-card.blue { --feat-color:#3B82F6; --feat-glow:rgba(59,130,246,.15); }
+.feat-card.indigo{ --feat-color:#6366F1; --feat-glow:rgba(99,102,241,.15); }
+.feat-card.green { --feat-color:#10B981; --feat-glow:rgba(16,185,129,.12); }
+.feat-card.cyan  { --feat-color:#06B6D4; --feat-glow:rgba(6,182,212,.12); }
+.feat-card.amber { --feat-color:#F59E0B; --feat-glow:rgba(245,158,11,.12); }
+.feat-card.purple{ --feat-color:#A78BFA; --feat-glow:rgba(167,139,250,.12); }
+
+.feat-icon{
+  width:52px;height:52px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:22px;position:relative;z-index:1;
+  background:var(--feat-icon-bg, rgba(99,102,241,.15));
+  border:1px solid var(--feat-color, rgba(99,102,241,.3));
+  box-shadow:0 4px 16px var(--feat-glow, rgba(99,102,241,.15));
+}
+.feat-card.blue   .feat-icon{--feat-icon-bg:rgba(59,130,246,.12)}
+.feat-card.indigo .feat-icon{--feat-icon-bg:rgba(99,102,241,.12)}
+.feat-card.green  .feat-icon{--feat-icon-bg:rgba(16,185,129,.12)}
+.feat-card.cyan   .feat-icon{--feat-icon-bg:rgba(6,182,212,.12)}
+.feat-card.amber  .feat-icon{--feat-icon-bg:rgba(245,158,11,.12)}
+.feat-card.purple .feat-icon{--feat-icon-bg:rgba(167,139,250,.12)}
+
+.feat-icon svg{width:24px;height:24px;color:var(--feat-color,#818CF8)}
+.feat-h{font-size:17px;font-weight:700;color:var(--white);margin-bottom:10px;letter-spacing:-.01em;position:relative;z-index:1}
+.feat-p{font-size:14px;color:var(--gray);line-height:1.65;position:relative;z-index:1}
+
+/* ══════════════════════════════════════
+   ACCOUNT OVERVIEW PREVIEW
+══════════════════════════════════════ */
+.preview{padding:80px 0}
+.preview-inner{
+  max-width:1200px;margin:0 auto;padding:0 48px;
+  display:flex;align-items:center;gap:80px;
+}
+.preview-text{flex:1}
+.preview-check{
+  display:flex;align-items:flex-start;gap:12px;
+  margin-bottom:18px;
+}
+.preview-check svg{width:18px;height:18px;color:var(--green);flex-shrink:0;margin-top:2px}
+.preview-check-title{font-size:15px;font-weight:650;color:var(--white);margin-bottom:3px}
+.preview-check-desc{font-size:13.5px;color:var(--gray);line-height:1.55}
+.preview-visual{flex:0 0 520px}
+.pv-card{
+  background:linear-gradient(135deg,rgba(15,31,58,.95) 0%,rgba(6,14,28,.98) 100%);
+  border:1px solid var(--border2);border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.05),inset 0 1px 0 rgba(255,255,255,.07);
+}
+.pv-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02);
+}
+.pv-title{font-size:13px;font-weight:700;color:var(--white)}
+.pv-badge{
+  padding:3px 10px;border-radius:99px;
+  background:rgba(16,185,129,.12);
+  border:1px solid rgba(16,185,129,.25);
+  font-size:11px;font-weight:700;color:#34D399;
+}
+.pv-body{padding:20px}
+/* Credit cards row */
+.pv-cards-row{display:flex;gap:12px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px}
+.pv-cc{
+  flex:0 0 200px;height:110px;border-radius:14px;
+  padding:16px 18px;position:relative;overflow:hidden;
+  cursor:default;
+}
+.pv-cc-1{background:linear-gradient(135deg,#1D4ED8 0%,#6366F1 100%)}
+.pv-cc-2{background:linear-gradient(135deg,#0F766E 0%,#06B6D4 100%)}
+.pv-cc-3{background:linear-gradient(135deg,#7C3AED 0%,#A78BFA 100%)}
+.pv-cc::before{
+  content:'';position:absolute;top:-20px;right:-20px;
+  width:90px;height:90px;border-radius:50%;
+  background:rgba(255,255,255,.08);
+}
+.pv-cc-bank{font-size:10px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em}
+.pv-cc-num{font-size:12px;font-weight:600;color:rgba(255,255,255,.9);margin-top:20px;letter-spacing:.12em}
+.pv-cc-bottom{display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px}
+.pv-cc-name{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em}
+.pv-cc-limit{font-size:12px;font-weight:800;color:rgba(255,255,255,.95)}
+/* Stats mini */
+.pv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.pv-stat{
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:12px;padding:14px 16px;
+}
+.pv-stat-label{font-size:10px;font-weight:700;color:var(--gray2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.pv-stat-val{font-size:20px;font-weight:800;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+/* Recent tx */
+.pv-tx-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.pv-tx-h{font-size:12px;font-weight:700;color:var(--white)}
+.pv-txs{display:flex;flex-direction:column;gap:0}
+.pv-tx{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.pv-tx:last-child{border-bottom:none}
+.pv-tx-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.pv-tx-mer{font-size:13px;font-weight:600;color:var(--white)}
+.pv-tx-cat{font-size:11px;color:var(--gray2)}
+.pv-tx-right{margin-left:auto;text-align:right}
+.pv-tx-amt{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.pv-tx-dt{font-size:10.5px;color:var(--gray2)}
+
+/* ══════════════════════════════════════
+   HOW IT WORKS
+══════════════════════════════════════ */
+.how{padding:100px 0;text-align:center}
+.how .section-sub{margin:0 auto 64px}
+.how-steps{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:32px;max-width:900px;margin:0 auto;
+}
+.how-step{position:relative}
+.how-step-num{
+  width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(37,99,235,.2),rgba(99,102,241,.2));
+  border:1px solid rgba(99,102,241,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;color:#818CF8;
+  margin:0 auto 20px;
+}
+.how-step-h{font-size:17px;font-weight:700;color:var(--white);margin-bottom:10px}
+.how-step-p{font-size:14px;color:var(--gray);line-height:1.65}
+.how-connector{
+  position:absolute;top:22px;right:-50%;width:50%;
+  height:1px;background:linear-gradient(90deg,rgba(99,102,241,.4),transparent);
+}
+.how-step:last-child .how-connector{display:none}
+
+/* ══════════════════════════════════════
+   SECURITY
+══════════════════════════════════════ */
+.security{padding:100px 0}
+.security-inner{
+  max-width:1200px;margin:0 auto;padding:0 48px;
+  display:flex;align-items:center;gap:80px;
+}
+.security-text{flex:1}
+.security-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:16px;margin-top:36px;
+}
+.sec-card{
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:14px;padding:20px;
+  display:flex;align-items:flex-start;gap:14px;
+  transition:border-color .2s;
+}
+.sec-card:hover{border-color:rgba(255,255,255,.15)}
+.sec-icon{
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.sec-icon svg{width:20px;height:20px}
+.sec-h{font-size:14px;font-weight:700;color:var(--white);margin-bottom:4px}
+.sec-p{font-size:12.5px;color:var(--gray);line-height:1.55}
+.security-visual{flex:0 0 380px}
+.sec-shield{
+  background:linear-gradient(135deg,rgba(15,31,58,.95),rgba(6,14,28,.98));
+  border:1px solid var(--border2);border-radius:20px;
+  padding:36px;text-align:center;
+  box-shadow:0 32px 80px rgba(0,0,0,.5);
+}
+.sec-shield-icon{
+  width:80px;height:80px;border-radius:24px;
+  background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(6,182,212,.12));
+  border:1px solid rgba(16,185,129,.3);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+  box-shadow:0 8px 32px rgba(16,185,129,.2);
+}
+.sec-shield-icon svg{width:40px;height:40px;color:#34D399}
+.sec-shield-title{font-size:20px;font-weight:800;color:var(--white);margin-bottom:8px}
+.sec-shield-sub{font-size:14px;color:var(--gray);line-height:1.6;margin-bottom:24px}
+.sec-badges{display:flex;flex-direction:column;gap:10px}
+.sec-badge{
+  display:flex;align-items:center;gap:10px;
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:10px;padding:12px 16px;
+}
+.sec-badge svg{width:16px;height:16px;color:#34D399;flex-shrink:0}
+.sec-badge-text{font-size:13px;color:var(--gray);font-weight:500}
+
+/* ══════════════════════════════════════
+   MOBILE APP
+══════════════════════════════════════ */
+.mobile{padding:100px 0}
+.mobile-inner{
+  max-width:1000px;margin:0 auto;padding:0 48px;
+  text-align:center;
+}
+.mobile-card{
+  background:linear-gradient(135deg,rgba(37,99,235,.12) 0%,rgba(99,102,241,.12) 50%,rgba(6,182,212,.08) 100%);
+  border:1px solid rgba(99,102,241,.25);
+  border-radius:28px;padding:60px 48px;
+  position:relative;overflow:hidden;
+}
+.mobile-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(37,99,235,.15) 0%,transparent 60%);
+  pointer-events:none;
+}
+.mobile-card .section-h{margin-bottom:16px}
+.mobile-card .section-sub{margin:0 auto 36px;max-width:480px}
+.store-btns{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.store-btn{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;padding:14px 24px;
+  color:var(--white);cursor:pointer;
+  transition:all .18s;font-family:inherit;
+  text-decoration:none;
+}
+.store-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);transform:translateY(-2px)}
+.store-btn svg{width:28px;height:28px;flex-shrink:0}
+.store-btn-label{font-size:11px;color:var(--gray);font-weight:500;line-height:1}
+.store-btn-name{font-size:16px;font-weight:700;color:var(--white);line-height:1.2;margin-top:2px}
+.mobile-features{
+  display:flex;justify-content:center;gap:32px;
+  margin-top:40px;flex-wrap:wrap;
+}
+.mobile-feat{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--gray)}
+.mobile-feat svg{width:16px;height:16px;color:var(--green)}
+
+/* ══════════════════════════════════════
+   FOOTER
+══════════════════════════════════════ */
+footer{
+  border-top:1px solid var(--border);
+  background:rgba(6,14,28,.5);
+  padding:48px;
+}
+.footer-inner{
+  max-width:1200px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:20px;
+}
+.footer-brand{display:flex;align-items:center;gap:10px}
+.footer-brand-name{font-size:15px;font-weight:700;color:var(--white)}
+.footer-sub{font-size:13px;color:var(--gray);margin-top:2px}
+.footer-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.footer-link{padding:6px 14px;font-size:13px;color:var(--gray2);border-radius:6px;transition:color .15s}
+.footer-link:hover{color:var(--white)}
+.footer-copy{font-size:12px;color:var(--gray2)}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+@@media(max-width:1024px){
+  .hero{flex-direction:column;padding:60px 32px 60px;gap:48px}
+  .hero-mockup{flex:none;width:100%;max-width:480px}
+  .preview-inner{flex-direction:column;padding:0 32px;gap:48px}
+  .preview-visual{flex:none;width:100%}
+  .security-inner{flex-direction:column;padding:0 32px;gap:48px}
+  .security-visual{flex:none;width:100%;max-width:440px}
+  .trust-inner{grid-template-columns:repeat(2,1fr)}
+  .features-grid{grid-template-columns:repeat(2,1fr)}
+}
+@@media(max-width:768px){
+  nav{padding:12px 20px}
+  .nav-links{display:none}
+  .hero{padding:48px 20px}
+  .section-inner{padding:0 20px}
+  .trust-bar{padding:28px 20px}
+  .features-grid,.how-steps{grid-template-columns:1fr}
+  .security-grid{grid-template-columns:1fr}
+  .mobile-inner{padding:0 20px}
+  .mobile-card{padding:36px 24px}
+  footer{padding:32px 20px}
+  .footer-inner{flex-direction:column;align-items:flex-start;gap:16px}
+  .pv-cards-row{flex-direction:column}
+  .pv-cc{flex:none;width:100%;height:auto}
+  .pv-stats{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAVBAR ─────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-icon"><i data-lucide="wallet"></i></div>
+    <span class="nav-brand-text">PurchaseTracker</span>
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" href="#features">Funciones</a>
+    <a class="nav-link" href="#preview">Vista previa</a>
+    <a class="nav-link" href="#security">Seguridad</a>
+  </div>
+  <div class="nav-cta">
+    <a href="/auth/login" class="btn-ghost" style="text-decoration:none">Iniciar sesión</a>
+    <a href="/auth/login" class="btn-primary" style="text-decoration:none">Empezar gratis</a>
+  </div>
+</nav>
+
+<!-- ── HERO ───────────────────────────────────────────────────── -->
+<section class="hero" style="position:relative;z-index:1;max-width:1200px;margin:0 auto;display:flex;align-items:center;padding:100px 48px 80px;gap:64px;flex-wrap:wrap">
+  <div class="hero-text">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Disponible ahora — Completamente gratis
+    </div>
+    <h1>Tu dinero,<br><span>bajo control total.</span></h1>
+    <p class="hero-sub">
+      Registrá cada gasto, gestioná tus tarjetas de crédito, seguí financiamientos y analizá tus finanzas personales en un solo lugar.
+    </p>
+    <div class="hero-actions">
+      <a href="/auth/login" class="btn-hero-primary" style="text-decoration:none">
+        <i data-lucide="arrow-right"></i>
+        Comenzar ahora
+      </a>
+      <button class="btn-hero-ghost" onclick="document.getElementById('preview').scrollIntoView({behavior:'smooth'})">
+        <i data-lucide="play-circle"></i>
+        Ver demo
+      </button>
+    </div>
+    <div class="hero-trust">
+      <div class="hero-trust-item"><i data-lucide="check-circle-2"></i>Sin tarjeta de crédito</div>
+      <div class="hero-trust-item"><i data-lucide="check-circle-2"></i>Datos 100% privados</div>
+      <div class="hero-trust-item"><i data-lucide="check-circle-2"></i>Siempre actualizado</div>
+    </div>
+  </div>
+
+  <div class="hero-mockup">
+    <div class="mockup-glow"></div>
+    <div class="mockup-card">
+      <div class="mockup-topbar">
+        <div class="mockup-dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <div class="mockup-title">Dashboard — PurchaseTracker</div>
+        <div></div>
+      </div>
+      <div class="mockup-body">
+        <!-- Balance -->
+        <div class="m-balance">
+          <div class="m-bal-label">Gasto del mes</div>
+          <div class="m-bal-row">
+            <div>
+              <div class="m-bal-amount">₡ 847.320</div>
+              <div class="m-bal-sub">$ 1.423,80 USD equivalente</div>
+            </div>
+            <div class="m-bal-chip">
+              <i data-lucide="trending-down" style="width:11px;height:11px"></i>
+              -12%
+            </div>
+          </div>
+        </div>
+        <!-- KPIs -->
+        <div class="m-kpis">
+          <div class="m-kpi">
+            <div class="m-kpi-label">Financiamientos</div>
+            <div class="m-kpi-val" style="color:#818CF8">₡ 98.272</div>
+          </div>
+          <div class="m-kpi">
+            <div class="m-kpi-label">Suscripciones</div>
+            <div class="m-kpi-val" style="color:#34D399">$ 45,90</div>
+          </div>
+        </div>
+        <!-- Transactions -->
+        <div class="m-tx-header">
+          <span class="m-tx-title">Movimientos recientes</span>
+          <span class="m-tx-link">Ver todos →</span>
+        </div>
+        <div class="m-tx">
+          <div class="m-tx-icon" style="background:rgba(239,68,68,.12)">🛒</div>
+          <div>
+            <div class="m-tx-name">Walmart</div>
+            <div class="m-tx-date">Hoy, 14:32</div>
+          </div>
+          <div class="m-tx-amt neg">-₡ 32.500</div>
+        </div>
+        <div class="m-tx">
+          <div class="m-tx-icon" style="background:rgba(16,185,129,.12)">💊</div>
+          <div>
+            <div class="m-tx-name">Farmacia Fischel</div>
+            <div class="m-tx-date">Hoy, 11:15</div>
+          </div>
+          <div class="m-tx-amt neg">-₡ 8.900</div>
+        </div>
+        <div class="m-tx">
+          <div class="m-tx-icon" style="background:rgba(245,158,11,.12)">⛽</div>
+          <div>
+            <div class="m-tx-name">RECOPE</div>
+            <div class="m-tx-date">Ayer, 09:44</div>
+          </div>
+          <div class="m-tx-amt neg">-₡ 25.000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TRUST BAR ──────────────────────────────────────────────── -->
+<div class="trust-bar">
+  <div class="trust-inner">
+    <div class="trust-stat">
+      <div class="trust-num"><span>100%</span></div>
+      <div class="trust-label">Datos privados y locales</div>
+    </div>
+    <div class="trust-stat">
+      <div class="trust-num"><span>∞</span></div>
+      <div class="trust-label">Movimientos registrables</div>
+    </div>
+    <div class="trust-stat">
+      <div class="trust-num"><span>2</span></div>
+      <div class="trust-label">Monedas (CRC y USD)</div>
+    </div>
+    <div class="trust-stat">
+      <div class="trust-num"><span>0₡</span></div>
+      <div class="trust-label">Costo de uso</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEATURES ───────────────────────────────────────────────── -->
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="features-head">
+      <div class="section-tag"><i data-lucide="sparkles"></i> Funcionalidades</div>
+      <h2 class="section-h">Todo lo que necesitás para<br><span>controlar tus finanzas</span></h2>
+      <p class="section-sub">Herramientas diseñadas específicamente para el sistema financiero costarricense. CRC y USD, siempre sincronizados.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card blue">
+        <div class="feat-icon"><i data-lucide="arrow-left-right"></i></div>
+        <div class="feat-h">Movimientos en tiempo real</div>
+        <p class="feat-p">Registrá compras, pagos, retiros y transferencias de todas tus tarjetas en un solo lugar con detalle completo.</p>
+      </div>
+      <div class="feat-card indigo">
+        <div class="feat-icon"><i data-lucide="credit-card"></i></div>
+        <div class="feat-h">Gestión de tarjetas</div>
+        <p class="feat-p">Controlá los ciclos de corte, fechas de pago y límites de todas tus tarjetas de crédito y débito.</p>
+      </div>
+      <div class="feat-card green">
+        <div class="feat-icon"><i data-lucide="landmark"></i></div>
+        <div class="feat-h">Financiamientos y cuotas</div>
+        <p class="feat-p">Seguí tus compras diferidas, tasa 0%, minicuotas y cualquier financiamiento activo con calendario de pagos.</p>
+      </div>
+      <div class="feat-card cyan">
+        <div class="feat-icon"><i data-lucide="repeat-2"></i></div>
+        <div class="feat-h">Suscripciones</div>
+        <p class="feat-p">Inventario completo de tus suscripciones mensuales y anuales con costo equivalente en CRC y USD.</p>
+      </div>
+      <div class="feat-card amber">
+        <div class="feat-icon"><i data-lucide="bar-chart-2"></i></div>
+        <div class="feat-h">Reportes exportables</div>
+        <p class="feat-p">Generá reportes en PDF y Excel filtrados por fecha, banco, tarjeta o categoría con un clic.</p>
+      </div>
+      <div class="feat-card purple">
+        <div class="feat-icon"><i data-lucide="trending-up"></i></div>
+        <div class="feat-h">Tipo de cambio BCCR</div>
+        <p class="feat-p">Tipo de cambio oficial actualizado diariamente desde el Banco Central. Conversor integrado USD/CRC.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ACCOUNT PREVIEW ────────────────────────────────────────── -->
+<section class="preview" id="preview">
+  <div class="preview-inner">
+    <div class="preview-text">
+      <div class="section-tag"><i data-lucide="layout-dashboard"></i> Vista previa</div>
+      <h2 class="section-h">Una vista completa de<br><span>toda tu economía</span></h2>
+      <p class="section-sub" style="margin-bottom:32px">Un dashboard que te muestra exactamente dónde está tu dinero, sin complicaciones.</p>
+
+      <div class="preview-check">
+        <i data-lucide="check-circle-2"></i>
+        <div>
+          <div class="preview-check-title">Resumen mensual instantáneo</div>
+          <div class="preview-check-desc">Mirás de un vistazo cuánto gastaste, cuánto debés en cuotas y cuánto pagás en suscripciones.</div>
+        </div>
+      </div>
+      <div class="preview-check">
+        <i data-lucide="check-circle-2"></i>
+        <div>
+          <div class="preview-check-title">Múltiples tarjetas unificadas</div>
+          <div class="preview-check-desc">BAC, Davivienda, Popular, BCR — todas tus tarjetas en un solo panel de control.</div>
+        </div>
+      </div>
+      <div class="preview-check">
+        <i data-lucide="check-circle-2"></i>
+        <div>
+          <div class="preview-check-title">Análisis por categoría</div>
+          <div class="preview-check-desc">Descubrí en qué gastás más con gráficos automáticos por categoría y comercio.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-visual">
+      <div class="pv-card">
+        <div class="pv-header">
+          <div class="pv-title">💳 Mis tarjetas</div>
+          <div class="pv-badge">● 3 activas</div>
+        </div>
+        <div class="pv-body">
+          <div class="pv-cards-row">
+            <div class="pv-cc pv-cc-1">
+              <div class="pv-cc-bank">BAC Credomatic</div>
+              <div class="pv-cc-num">•••• •••• •••• 4821</div>
+              <div class="pv-cc-bottom">
+                <div class="pv-cc-name">Crédito</div>
+                <div class="pv-cc-limit">₡1.200.000</div>
+              </div>
+            </div>
+            <div class="pv-cc pv-cc-2">
+              <div class="pv-cc-bank">Davivienda</div>
+              <div class="pv-cc-num">•••• •••• •••• 7703</div>
+              <div class="pv-cc-bottom">
+                <div class="pv-cc-name">Crédito</div>
+                <div class="pv-cc-limit">₡800.000</div>
+              </div>
+            </div>
+            <div class="pv-cc pv-cc-3">
+              <div class="pv-cc-bank">BCR</div>
+              <div class="pv-cc-num">•••• •••• •••• 1156</div>
+              <div class="pv-cc-bottom">
+                <div class="pv-cc-name">Débito</div>
+                <div class="pv-cc-limit">₡450.000</div>
+              </div>
+            </div>
+          </div>
+          <div class="pv-stats">
+            <div class="pv-stat">
+              <div class="pv-stat-label">Gasto mayo</div>
+              <div class="pv-stat-val" style="color:#F87171">₡ 847k</div>
+            </div>
+            <div class="pv-stat">
+              <div class="pv-stat-label">Cuotas</div>
+              <div class="pv-stat-val" style="color:#818CF8">₡ 98k</div>
+            </div>
+            <div class="pv-stat">
+              <div class="pv-stat-label">Disponible</div>
+              <div class="pv-stat-val" style="color:#34D399">₡ 1.4M</div>
+            </div>
+          </div>
+          <div class="pv-tx-head">
+            <div class="pv-tx-h">Últimos movimientos</div>
+          </div>
+          <div class="pv-txs">
+            <div class="pv-tx">
+              <div class="pv-tx-ico" style="background:rgba(239,68,68,.12)">🛒</div>
+              <div>
+                <div class="pv-tx-mer">Walmart Escazú</div>
+                <div class="pv-tx-cat">Supermercado · BAC</div>
+              </div>
+              <div class="pv-tx-right">
+                <div class="pv-tx-amt" style="color:#F87171">-₡ 32.500</div>
+                <div class="pv-tx-dt">Hoy</div>
+              </div>
+            </div>
+            <div class="pv-tx">
+              <div class="pv-tx-ico" style="background:rgba(245,158,11,.12)">⛽</div>
+              <div>
+                <div class="pv-tx-mer">RECOPE</div>
+                <div class="pv-tx-cat">Combustible · Davivienda</div>
+              </div>
+              <div class="pv-tx-right">
+                <div class="pv-tx-amt" style="color:#F87171">-₡ 25.000</div>
+                <div class="pv-tx-dt">Ayer</div>
+              </div>
+            </div>
+            <div class="pv-tx">
+              <div class="pv-tx-ico" style="background:rgba(99,102,241,.12)">📺</div>
+              <div>
+                <div class="pv-tx-mer">Netflix</div>
+                <div class="pv-tx-cat">Entretenimiento · BAC</div>
+              </div>
+              <div class="pv-tx-right">
+                <div class="pv-tx-amt" style="color:#F87171">-$ 17,99</div>
+                <div class="pv-tx-dt">23 may</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ───────────────────────────────────────────── -->
+<section class="how">
+  <div class="section-inner">
+    <div class="section-tag" style="margin:0 auto 16px"><i data-lucide="zap"></i> Así de fácil</div>
+    <h2 class="section-h" style="margin-bottom:12px">Empezá en <span>3 pasos</span></h2>
+    <p class="section-sub">Sin configuraciones complicadas. Sin integraciones bancarias que fallan. Solo vos y tus números.</p>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-step-num">1</div>
+        <div class="how-step-h">Creá tu cuenta</div>
+        <p class="how-step-p">Registrate con tu correo. Sin tarjeta, sin verificación engorrosa. En 30 segundos estás adentro.</p>
+        <div class="how-connector"></div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">2</div>
+        <div class="how-step-h">Agregá tus tarjetas</div>
+        <p class="how-step-p">Ingresá tus tarjetas de crédito y débito (solo el nombre y límite, nunca datos sensibles).</p>
+        <div class="how-connector"></div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">3</div>
+        <div class="how-step-h">Registrá movimientos</div>
+        <p class="how-step-p">Cada vez que gastás, lo registrás. En semanas tenés una vista clara de tus finanzas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECURITY ───────────────────────────────────────────────── -->
+<section class="security" id="security">
+  <div class="security-inner">
+    <div class="security-text">
+      <div class="section-tag"><i data-lucide="shield-check"></i> Seguridad</div>
+      <h2 class="section-h">Tu privacidad es<br><span>nuestra prioridad</span></h2>
+      <p class="section-sub" style="margin-bottom:0">No somos un banco. No tenemos acceso a tus cuentas. Tus datos son tuyos.</p>
+      <div class="security-grid">
+        <div class="sec-card">
+          <div class="sec-icon" style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25)">
+            <i data-lucide="lock" style="color:#34D399"></i>
+          </div>
+          <div>
+            <div class="sec-h">Contraseñas encriptadas</div>
+            <p class="sec-p">Las contraseñas se guardan con hash BCrypt. Nadie puede verlas.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon" style="background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25)">
+            <i data-lucide="database" style="color:#60A5FA"></i>
+          </div>
+          <div>
+            <div class="sec-h">Sin datos bancarios</div>
+            <p class="sec-p">Nunca pedimos números de cuenta, claves de banca en línea ni datos sensibles.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25)">
+            <i data-lucide="server" style="color:#818CF8"></i>
+          </div>
+          <div>
+            <div class="sec-h">Control total de datos</div>
+            <p class="sec-p">Los datos viven en tu servidor. Exportá todo en Excel cuando quieras.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25)">
+            <i data-lucide="user-check" style="color:#FCD34D"></i>
+          </div>
+          <div>
+            <div class="sec-h">Acceso por roles</div>
+            <p class="sec-p">Sistema multiusuario con roles de admin y usuario. Cada quien ve solo sus datos.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="security-visual">
+      <div class="sec-shield">
+        <div class="sec-shield-icon">
+          <i data-lucide="shield-check"></i>
+        </div>
+        <div class="sec-shield-title">Diseñado para Costa Rica</div>
+        <p class="sec-shield-sub">Sistema de registro manual — vos controlás qué entra, qué sale y qué se ve.</p>
+        <div class="sec-badges">
+          <div class="sec-badge">
+            <i data-lucide="check-circle-2"></i>
+            <span class="sec-badge-text">Sin integraciones bancarias = sin riesgos</span>
+          </div>
+          <div class="sec-badge">
+            <i data-lucide="check-circle-2"></i>
+            <span class="sec-badge-text">Tipo de cambio oficial BCCR</span>
+          </div>
+          <div class="sec-badge">
+            <i data-lucide="check-circle-2"></i>
+            <span class="sec-badge-text">Tokens CSRF en todos los formularios</span>
+          </div>
+          <div class="sec-badge">
+            <i data-lucide="check-circle-2"></i>
+            <span class="sec-badge-text">Sesión con cookies HttpOnly seguras</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MOBILE ──────────────────────────────────────────────────── -->
+<section class="mobile">
+  <div class="mobile-inner">
+    <div class="mobile-card">
+      <div class="section-tag" style="margin:0 auto 20px"><i data-lucide="smartphone"></i> Siempre disponible</div>
+      <h2 class="section-h">Llevalo en tu bolsillo</h2>
+      <p class="section-sub">PurchaseTracker funciona como PWA — instalalo directo desde el navegador en iOS y Android. Sin App Store necesaria.</p>
+      <div class="store-btns">
+        <a href="#" class="store-btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--white)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div>
+            <div class="store-btn-label">Descargar en el</div>
+            <div class="store-btn-name">App Store</div>
+          </div>
+        </a>
+        <a href="#" class="store-btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--white)"><path d="M3.18 23.76c.35.19.74.24 1.12.14l11.53-6.67-2.61-2.61-10.04 9.14zm14.3-8.26l2.92-1.69c.54-.32.54-1.07 0-1.39L17.4 10.7l-2.77 2.77 2.85 2.03zM3.3.24L13.34 10.3l-2.62 2.62L1.18 6.35C.62 6.11.24 5.55.24 4.9c0-.64.38-1.21.94-1.56L3.3.24zM4.3.1c-.38-.1-.77-.05-1.12.14l10.16 9.14 2.61-2.61L4.3.1z"/></svg>
+          <div>
+            <div class="store-btn-label">Disponible en</div>
+            <div class="store-btn-name">Google Play</div>
+          </div>
+        </a>
+        <a href="/auth/login" class="store-btn" style="text-decoration:none">
+          <i data-lucide="globe" style="width:28px;height:28px;color:var(--white)"></i>
+          <div>
+            <div class="store-btn-label">Usar en</div>
+            <div class="store-btn-name">El navegador</div>
+          </div>
+        </a>
+      </div>
+      <div class="mobile-features">
+        <div class="mobile-feat"><i data-lucide="check-circle-2"></i>Funciona offline</div>
+        <div class="mobile-feat"><i data-lucide="check-circle-2"></i>Instalable como app</div>
+        <div class="mobile-feat"><i data-lucide="check-circle-2"></i>Notificaciones push</div>
+        <div class="mobile-feat"><i data-lucide="check-circle-2"></i>Diseño responsive</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="nav-icon"><i data-lucide="wallet"></i></div>
+      <div>
+        <div class="footer-brand-name">PurchaseTracker</div>
+        <div class="footer-sub">Control financiero inteligente para Costa Rica</div>
+      </div>
+    </div>
+    <div class="footer-links">
+      <a href="#features" class="footer-link">Funciones</a>
+      <a href="#preview"  class="footer-link">Vista previa</a>
+      <a href="#security" class="footer-link">Seguridad</a>
+      <a href="/auth/login" class="footer-link">Iniciar sesión</a>
+    </div>
+    <div class="footer-copy">© 2026 PurchaseTracker. Hecho en Costa Rica 🇨🇷</div>
+  </div>
+</footer>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
