@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using PurchaseTracker.Shared.Data;
 using PurchaseTracker.Shared.Services;
@@ -76,13 +77,20 @@ app.Services.GetRequiredService<PurchaseTracker.Web.Services.PwaIconService>()
 if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 else
-    app.UseExceptionHandler("/dashboard");
+    app.UseExceptionHandler("/auth/login"); // evitar loop: /dashboard requiere auth y puede causar redirección infinita
+
+// Necesario en hosting detrás de proxy/IIS (siteasp.net termina SSL)
+// Sin esto las cookies pueden fallar en HTTPS y generar loops de redirección
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllerRoute("default", "{controller=Dashboard}/{action=Index}/{id?}");
+app.MapControllerRoute("default", "{controller=Landing}/{action=Index}/{id?}");
 
 app.Run();
