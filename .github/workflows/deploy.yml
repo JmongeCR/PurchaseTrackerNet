@@ -28,29 +28,15 @@ jobs:
       - name: Build
         run: dotnet build PurchaseTracker.Web/PurchaseTracker.Web.csproj -c Release --no-restore
 
-      # 5. Publish → carpeta local
-      - name: Publish
-        run: dotnet publish PurchaseTracker.Web/PurchaseTracker.Web.csproj -c Release --no-build -o ./publish-output
-
-      # 6. Deploy via Web Deploy (MSDeploy) a siteasp.net
-      - name: Deploy via Web Deploy
+      # 5. Publish + Deploy directo al servidor via el perfil .pubxml
+      - name: Publish & Deploy
         env:
           DEPLOY_PASSWORD: ${{ secrets.WEBDEPLOY_PASSWORD }}
         shell: pwsh
         run: |
-          $msdeploy  = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          $publishPath = (Resolve-Path ./publish-output).Path
-          $password    = $env:DEPLOY_PASSWORD
-          $computerName = "https://site60072.siteasp.net:8172/msdeploy.axd?site=site60072"
-
-          # Cada elemento del array es un argumento separado — sin backtick ni comas en líneas distintas
-          $arguments = @(
-            "-verb:sync",
-            "-source:contentPath=$publishPath",
-            "-dest:contentPath=site60072,computerName=$computerName,userName=site60072,password=$password,authType=Basic",
-            "-allowUntrusted",
-            "-enableRule:AppOffline"
-          )
-
-          & $msdeploy @arguments
-          exit $LASTEXITCODE
+          dotnet publish PurchaseTracker.Web/PurchaseTracker.Web.csproj `
+            -c Release `
+            --no-build `
+            /p:PublishProfile=site60072-WebDeploy `
+            /p:Password="$env:DEPLOY_PASSWORD" `
+            /p:AllowUntrustedCertificate=true
