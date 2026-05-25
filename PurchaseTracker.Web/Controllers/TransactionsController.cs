@@ -83,6 +83,41 @@ public class TransactionsController : Controller
         return View(vm);
     }
 
+    [HttpGet("create")]
+    public async Task<IActionResult> Create(decimal? amount, string? currency, string? type)
+    {
+        if (ClaimsHelper.IsAdmin(User))
+            return RedirectToAction("Index", "Admin");
+
+        var userId = ClaimsHelper.GetUserId(User);
+        var cards      = await _db.Cards.Where(c => c.UserId == userId && c.IsActive).OrderBy(c => c.Bank).ToListAsync();
+        var categories = await _db.Categories.Where(c => c.UserId == userId && c.IsActive).OrderBy(c => c.Name).ToListAsync();
+
+        var movType = type switch
+        {
+            "income"   => "ingreso",
+            "transfer" => "transferencia",
+            _          => "compra"
+        };
+
+        var vm = new CreateTransactionPageViewModel
+        {
+            Form = new AddTransactionViewModel
+            {
+                Amount          = amount ?? 0,
+                Currency        = currency ?? "CRC",
+                MovementType    = movType,
+                TransactionDate = DateTime.Today,
+                Status          = "Aprobada",
+            },
+            Cards      = cards,
+            Categories = categories,
+        };
+
+        ViewData["Title"] = "Nuevo movimiento";
+        return View(vm);
+    }
+
     [HttpPost("add")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(AddTransactionViewModel model)

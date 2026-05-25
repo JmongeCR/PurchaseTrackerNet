@@ -16,72 +16,72 @@
     </div>
 }
 
-<div class="page-header">
-    <div>
-        <div class="page-header-title">🔄 Suscripciones</div>
-        <div class="page-header-sub">@Model.ActiveCount suscripción(es) activa(s)</div>
-    </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSubModal">
-        + Nueva Suscripción
+<div class="d-flex align-items-center justify-content-between mb-4 gap-2">
+    <p class="mb-0" style="font-size:var(--text-sm);color:var(--text-secondary)">
+        @Model.ActiveCount suscripción(es) activa(s)
+    </p>
+    <button class="btn btn--primary btn--sm" data-bs-toggle="modal" data-bs-target="#addSubModal">
+        <i data-lucide="plus" style="width:16px;height:16px"></i> Nueva Suscripción
     </button>
 </div>
 
 <!-- ── KPI cards ─────────────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-xl-3">
-        <div class="kpi-card" style="border-left:3px solid #6366f1">
-            <div class="kpi-label">🔄 Activas</div>
-            <div class="kpi-value" style="color:#6366f1">@Model.ActiveCount</div>
-            <div class="kpi-sub">suscripciones activas</div>
+        <div class="kpi" style="border-left:4px solid var(--brand-500)">
+            <span class="kpi__label">🔄 Activas</span>
+            <span class="kpi__value" style="color:var(--brand-600)">@Model.ActiveCount</span>
+            <span class="kpi__sub">suscripciones activas</span>
         </div>
     </div>
     <div class="col-6 col-xl-3">
-        <div class="kpi-card" style="border-left:3px solid #7c3aed">
-            <div class="kpi-label">🪙 Mensual CRC</div>
-            <div class="kpi-value text-money" style="color:#7c3aed">₡ @Model.TotalMonthlyCrc.ToString("N2")</div>
-            <div class="kpi-sub">equivalente mensual</div>
+        <div class="kpi" style="border-left:4px solid #A78BFA">
+            <span class="kpi__label">🪙 Mensual CRC</span>
+            <span class="kpi__value" style="color:#7c3aed">₡ @Model.TotalMonthlyCrc.ToString("N2")</span>
+            <span class="kpi__sub">equivalente mensual</span>
         </div>
     </div>
     <div class="col-6 col-xl-3">
-        <div class="kpi-card" style="border-left:3px solid #0369a1">
-            <div class="kpi-label">💵 Mensual USD</div>
-            <div class="kpi-value text-money" style="color:#0369a1">$ @Model.TotalMonthlyUsd.ToString("N2")</div>
-            <div class="kpi-sub">equivalente mensual</div>
+        <div class="kpi" style="border-left:4px solid #818CF8">
+            <span class="kpi__label">💵 Mensual USD</span>
+            <span class="kpi__value" style="color:#4f46e5">$ @Model.TotalMonthlyUsd.ToString("N2")</span>
+            <span class="kpi__sub">equivalente mensual</span>
         </div>
     </div>
     <div class="col-6 col-xl-3">
-        <div class="kpi-card" style="border-left:3px solid #dc2626">
-            <div class="kpi-label">📅 Anual estimado CRC</div>
-            <div class="kpi-value text-money" style="color:#dc2626">₡ @Model.TotalAnnualCrc.ToString("N0")</div>
-            <div class="kpi-sub">proyección 12 meses</div>
+        <div class="kpi" style="border-left:4px solid var(--danger-400)">
+            <span class="kpi__label">📅 Anual estimado CRC</span>
+            <span class="kpi__value" style="color:var(--danger-600)">₡ @Model.TotalAnnualCrc.ToString("N0")</span>
+            <span class="kpi__sub">proyección 12 meses</span>
         </div>
     </div>
 </div>
 
 <!-- ── Tabs ──────────────────────────────────────────────────────────────── -->
-<ul class="nav nav-tabs mb-4">
-    <li class="nav-item">
-        <a class="nav-link @(tab == "activas" || tab == "" ? "active" : "")" href="?tab=activas">
-            ✅ Activas <span class="badge bg-success ms-1">@Model.Activas.Count</span>
+<div style="display:flex;gap:var(--sp-1);background:var(--neutral-100);border-radius:var(--radius-xl);padding:var(--sp-1);margin-bottom:var(--sp-4);width:fit-content">
+    @foreach (var t in new[] {
+        ("activas",    "✅ Activas",    Model.Activas.Count),
+        ("pausadas",   "⏸ Pausadas",   Model.Pausadas.Count),
+        ("canceladas", "❌ Canceladas", Model.Canceladas.Count)
+    })
+    {
+        var isActive = (tab == t.Item1) || (tab == "" && t.Item1 == "activas");
+        <a href="?tab=@t.Item1"
+           style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4);border-radius:var(--radius-lg);font-size:var(--text-sm);font-weight:600;text-decoration:none;transition:all var(--dur-base);@(isActive ? "background:var(--surface-card);color:var(--text-primary);box-shadow:var(--shadow-sm)" : "color:var(--text-muted)")">
+            @t.Item2
+            <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:@(isActive ? "var(--brand-50)" : "var(--neutral-200)");color:@(isActive ? "var(--brand-600)" : "var(--text-muted)")">@t.Item3</span>
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(tab == "pausadas" ? "active" : "")" href="?tab=pausadas">
-            ⏸ Pausadas <span class="badge bg-secondary ms-1">@Model.Pausadas.Count</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(tab == "canceladas" ? "active" : "")" href="?tab=canceladas">
-            ❌ Canceladas <span class="badge bg-danger ms-1">@Model.Canceladas.Count</span>
-        </a>
-    </li>
-</ul>
+    }
+</div>
 
 <!-- ── Subscriptions table ───────────────────────────────────────────────── -->
 @if (displayList.Any())
 {
     <div class="card">
-        <div class="card-body p-0">
+        <div class="card__header">
+            <span class="card__title">🔄 Suscripciones @(tab == "pausadas" ? "pausadas" : tab == "canceladas" ? "canceladas" : "activas")</span>
+            <span style="font-size:var(--text-xs);color:var(--text-muted)">@displayList.Count registro(s)</span>
+        </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -100,7 +100,7 @@
                         @foreach (var s in displayList)
                         {
                             var days = s.DaysUntilBilling;
-                            var daysColor = days <= 3 ? "#ef4444" : days <= 7 ? "#f59e0b" : "#94a3b8";
+                            var daysColor = days <= 3 ? "#F87171" : days <= 7 ? "#FCD34D" : "#71717A";
                             var daysLabel = days < 0 ? "Vencida" : days == 0 ? "¡Hoy!" : days == 1 ? "Mañana" : $"en {days}d";
                             var amtStr     = s.Amount.ToString("F2", CultureInfo.InvariantCulture);
                             var monthlyStr = s.MonthlyEquivalent.ToString("F2", CultureInfo.InvariantCulture);
@@ -114,7 +114,7 @@
                                     <div style="font-weight:600;font-size:14px">@s.Name</div>
                                     @if (!string.IsNullOrWhiteSpace(s.Merchant))
                                     {
-                                        <div style="font-size:11px;color:#94a3b8">@s.Merchant</div>
+                                        <div style="font-size:11px;color:var(--text-muted)">@s.Merchant</div>
                                     }
                                 </td>
                                 <td>
@@ -125,18 +125,18 @@
                                 <td class="text-money" style="font-weight:600">
                                     @(s.Currency == "USD" ? "$" : "₡") @s.Amount.ToString("N2")
                                 </td>
-                                <td style="font-size:12px;color:#64748b">
+                                <td style="font-size:12px;color:var(--text-muted)">
                                     @(s.Currency == "USD" ? "$" : "₡") @s.MonthlyEquivalent.ToString("N2")
                                     @if (s.Frequency != "mensual")
                                     {
-                                        <div style="font-size:10px;color:#94a3b8">/mes equiv.</div>
+                                        <div style="font-size:10px;color:var(--text-muted)">/mes equiv.</div>
                                     }
                                 </td>
                                 <td>
                                     <div style="font-size:13px;font-weight:600">@s.NextBillingDate.ToString("dd/MM/yyyy")</div>
                                     <div style="font-size:11px;color:@daysColor;font-weight:600">@daysLabel</div>
                                 </td>
-                                <td style="font-size:12px;color:#64748b">
+                                <td style="font-size:12px;color:var(--text-muted)">
                                     @(s.Card != null ? s.Card.DisplayName : "—")
                                 </td>
                                 <td>
@@ -148,7 +148,7 @@
                                     }
                                     else
                                     {
-                                        <span style="font-size:11px;color:#94a3b8">—</span>
+                                        <span style="font-size:11px;color:var(--text-muted)">—</span>
                                     }
                                 </td>
                                 <td class="text-end">
@@ -209,30 +209,25 @@
                     </tbody>
                 </table>
             </div>
-        </div>
     </div>
 }
 else
 {
     <div class="card">
-        <div class="card-body text-center py-5">
-            <div class="empty-state">
-                <div class="empty-state-icon">🔄</div>
-                <div class="empty-state-text">
+        <div class="empty">
+                <div class="empty__icon">🔄</div>
+                <p class="empty__title">
                     @(tab == "pausadas" ? "No hay suscripciones pausadas" :
                       tab == "canceladas" ? "No hay suscripciones canceladas" :
                       "No hay suscripciones activas")
-                </div>
+                </p>
                 @if (tab == "activas" || tab == "")
                 {
-                    <p style="font-size:13px;color:#94a3b8;margin-top:8px">
-                        Registra tus suscripciones recurrentes (Netflix, Spotify, gimnasio…)
-                    </p>
-                    <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addSubModal">
-                        + Nueva Suscripción
+                    <p class="empty__text">Registra tus suscripciones recurrentes (Netflix, Spotify, gimnasio…)</p>
+                    <button class="btn btn--primary btn--sm mt-2" data-bs-toggle="modal" data-bs-target="#addSubModal">
+                        <i data-lucide="plus" style="width:16px;height:16px"></i> Nueva Suscripción
                     </button>
                 }
-            </div>
         </div>
     </div>
 }

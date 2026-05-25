@@ -62,3 +62,10 @@ public class AddTransactionViewModel
     public int? CategoryId { get; set; }
     public string MovementType { get; set; } = "compra";
 }
+
+public class CreateTransactionPageViewModel
+{
+    public AddTransactionViewModel Form { get; set; } = new();
+    public List<PurchaseTracker.Shared.Entities.Card> Cards { get; set; } = new();
+    public List<PurchaseTracker.Shared.Entities.Category> Categories { get; set; } = new();
+}

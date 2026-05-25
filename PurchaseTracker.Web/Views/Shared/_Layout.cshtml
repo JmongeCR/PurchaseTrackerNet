@@ -1,6 +1,6 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" id="html-root">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -159,6 +159,11 @@
                 {
                     @await Component.InvokeAsync("ExchangeRate")
                 }
+                <button class="btn btn--icon btn--ghost theme-toggle" data-dark-toggle
+                        onclick="PT.toggleDarkMode()" aria-label="Cambiar tema" title="Modo oscuro">
+                    <i data-lucide="sun" class="theme-toggle__sun"></i>
+                    <i data-lucide="moon" class="theme-toggle__moon"></i>
+                </button>
                 <div style="display:flex;align-items:center;gap:var(--sp-2)">
                     <div class="sidebar-user__avatar" style="width:32px;height:32px;font-size:var(--text-xs)">@initials</div>
                 </div>
@@ -240,27 +245,58 @@
                     <i data-lucide="x"></i>
                 </button>
             </div>
-            <div class="sheet__body">
-                <a href="/transactions/create" class="sheet-action-row">
-                    <span class="sheet-action-row__icon" style="background:var(--brand-50);color:var(--brand-500)">
-                        <i data-lucide="plus-circle"></i>
-                    </span>
-                    <div class="sheet-action-row__info">
-                        <div class="sheet-action-row__title">Registrar manualmente</div>
-                        <div class="sheet-action-row__sub">Ingresa todos los datos del movimiento</div>
+            <div class="sheet__body" style="padding:0">
+
+                <!-- Amount display -->
+                <div style="padding:var(--sp-4) var(--sp-5) var(--sp-2);text-align:center">
+                    <div id="qa-amount-display"
+                         style="font-size:2.5rem;font-weight:700;letter-spacing:-0.02em;color:var(--text-primary);min-height:3.5rem;line-height:1">
+                        0
                     </div>
-                    <i data-lucide="chevron-right" class="sheet-action-row__chevron"></i>
-                </a>
-                <a href="/transactions/import" class="sheet-action-row">
-                    <span class="sheet-action-row__icon" style="background:var(--success-50);color:var(--success-600)">
-                        <i data-lucide="upload"></i>
-                    </span>
-                    <div class="sheet-action-row__info">
-                        <div class="sheet-action-row__title">Importar desde archivo</div>
-                        <div class="sheet-action-row__sub">Carga un CSV o Excel del banco</div>
-                    </div>
-                    <i data-lucide="chevron-right" class="sheet-action-row__chevron"></i>
-                </a>
+                </div>
+
+                <!-- Currency toggle -->
+                <div style="display:flex;justify-content:center;gap:var(--sp-2);margin-bottom:var(--sp-3)">
+                    <button type="button" class="currency-toggle__option btn btn--sm btn--primary"
+                            data-currency="CRC" style="min-width:64px;font-weight:600">₡ CRC</button>
+                    <button type="button" class="currency-toggle__option btn btn--sm btn--ghost"
+                            data-currency="USD" style="min-width:64px;font-weight:600">$ USD</button>
+                </div>
+
+                <!-- Type selector -->
+                <div style="display:flex;justify-content:center;gap:var(--sp-2);margin-bottom:var(--sp-4)">
+                    <button type="button" class="qa-type-pill btn btn--sm btn--primary" data-type="expense">Gasto</button>
+                    <button type="button" class="qa-type-pill btn btn--sm btn--ghost"   data-type="income">Ingreso</button>
+                    <button type="button" class="qa-type-pill btn btn--sm btn--ghost"   data-type="transfer">Transferencia</button>
+                </div>
+
+                <!-- Numpad -->
+                <div class="numpad" style="padding:0 var(--sp-3) var(--sp-2)">
+                    @foreach (var key in new[] { "1","2","3","4","5","6","7","8","9",".","0","⌫" })
+                    {
+                        <button type="button"
+                                class="numpad__key @(key == "⌫" ? "numpad__key--action" : "")"
+                                data-key="@(key == "⌫" ? "backspace" : key)">@key</button>
+                    }
+                </div>
+
+                <!-- Confirm row -->
+                <div class="qa-confirm-row" style="padding:var(--sp-3) var(--sp-4) var(--sp-5)">
+                    <a href="/transactions/create" class="btn btn--ghost btn--sm" style="flex:0 0 auto">
+                        <i data-lucide="sliders-horizontal" style="width:15px;height:15px"></i>
+                        Detallado
+                    </a>
+                    <form id="qa-form" method="get" action="/transactions/create" style="flex:1;display:flex">
+                        <input type="hidden" name="amount"   id="qa-amount-input" value="0" />
+                        <input type="hidden" name="currency" id="qa-currency-input" value="CRC" />
+                        <input type="hidden" name="type"     id="qa-type-input" value="expense" />
+                        <button type="submit" class="btn btn--primary" style="width:100%;font-weight:700">
+                            Continuar
+                            <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
+                        </button>
+                    </form>
+                </div>
+
             </div>
         </div>
     }

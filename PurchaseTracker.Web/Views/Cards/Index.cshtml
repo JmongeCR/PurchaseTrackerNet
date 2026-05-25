@@ -222,6 +222,7 @@ else
 /* Grid: fixed-size cards that wrap, never stretch */
 .bc2-grid{display:flex;flex-wrap:wrap;gap:24px}
 .bc2-wrap{position:relative;flex:0 0 auto;width:340px}
+/* wallet-cards__item sizing is handled by site.css */
 .bc2{position:relative;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;width:340px;aspect-ratio:1.586/1;box-shadow:0 8px 32px rgba(0,0,0,.22),0 2px 8px rgba(0,0,0,.14)}
 /* Gradients */
 .bc2-bcr  {background:linear-gradient(135deg,#1a3a6e 0%,#1d4ed8 60%,#2563eb 100%)}
@@ -279,7 +280,7 @@ else
 
     @if (Model.Cards.Any())
     {
-        <div class="bc2-grid">
+        <div class="wallet-cards" id="walletCards">
             @foreach (var cs in Model.Cards)
             {
                 var cardBrand = cs.Card.CardBrand ?? "";
@@ -303,7 +304,7 @@ else
                 var statPayDate  = cs.PaymentDueDate?.ToString("dd/MM") ?? "—";
                 var statLastDate = cs.LastTransactionDate?.ToString("dd/MM") ?? "—";
 
-                <div class="bc2-wrap">
+                <div class="wallet-cards__item">
 
                         <!-- ═══ CARD FACE ═══ -->
                         <div class="bc2 @bc2Cls">
@@ -461,7 +462,15 @@ else
                             </div>
                         </div>
 
-                    </div><!-- /bc2-wrap -->
+                    </div><!-- /wallet-cards__item -->
+            }
+        </div>
+
+        <!-- Carousel dots (mobile) -->
+        <div class="wallet-dots" id="walletDots">
+            @for (int i = 0; i < Model.Cards.Count; i++)
+            {
+                <button class="wallet-dot @(i == 0 ? "active" : "")" aria-label="Tarjeta @(i + 1)"></button>
             }
         </div>
     }

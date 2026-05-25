@@ -11,20 +11,16 @@
     };
     string TypeColor(string t) => t switch
     {
-        "tasa_0" => "#dcfce7;color:#16a34a",
-        "minicuotas" => "#fef3c7;color:#d97706",
-        "cuotas_normales" => "#dbeafe;color:#2563eb",
-        _ => "#f1f5f9;color:#64748b"
+        "tasa_0"          => "rgba(16,185,129,0.12);color:#34D399;border:1px solid rgba(16,185,129,.2)",
+        "minicuotas"      => "rgba(245,158,11,0.12);color:#FCD34D;border:1px solid rgba(245,158,11,.2)",
+        "cuotas_normales" => "rgba(99,102,241,0.12);color:#818CF8;border:1px solid rgba(99,102,241,.2)",
+        _                 => "rgba(255,255,255,0.06);color:#A1A1AA;border:1px solid rgba(255,255,255,.08)"
     };
 }
 
-<div class="page-header">
-    <div>
-        <div class="page-header-title">💳 Financiamientos</div>
-        <div class="page-header-sub">Control de cuotas y planes de pago</div>
-    </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFinancingModal">
-        + Nuevo financiamiento
+<div class="d-flex justify-content-end mb-4">
+    <button class="btn btn--primary btn--sm" data-bs-toggle="modal" data-bs-target="#addFinancingModal">
+        <i data-lucide="plus" style="width:16px;height:16px"></i> Nuevo financiamiento
     </button>
 </div>
 
@@ -32,69 +28,62 @@
 <div class="row g-3 mb-4">
     <!-- Activos -->
     <div class="col-6 col-xl">
-        <div class="kpi-card purple">
-            <div class="kpi-icon">📋</div>
-            <div class="kpi-label">Activos</div>
-            <div class="kpi-value">@Model.ActiveCount</div>
-            <div class="kpi-sub">En curso</div>
+        <div class="kpi" style="border-left:4px solid var(--brand-400)">
+            <span class="kpi__label">Activos</span>
+            <span class="kpi__value" style="color:var(--brand-600)">@Model.ActiveCount</span>
+            <span class="kpi__sub">En curso</span>
         </div>
     </div>
     <!-- CRC cuota -->
     <div class="col-6 col-xl">
-        <div class="kpi-card orange">
-            <div class="kpi-icon">📅</div>
-            <div class="kpi-label">Cuota mensual CRC</div>
-            <div class="kpi-value text-money" style="font-size:1.2rem">₡ @Model.TotalMonthlyCommitment.ToString("N2")</div>
-            <div class="kpi-sub">Compromiso mensual</div>
+        <div class="kpi" style="border-left:4px solid var(--warning-500)">
+            <span class="kpi__label">Cuota CRC</span>
+            <span class="kpi__value" style="color:var(--warning-600)">₡ @Model.TotalMonthlyCommitment.ToString("N2")</span>
+            <span class="kpi__sub">Compromiso mensual</span>
         </div>
     </div>
     <!-- CRC pendiente -->
     <div class="col-6 col-xl">
-        <div class="kpi-card red">
-            <div class="kpi-icon">💰</div>
-            <div class="kpi-label">Pendiente CRC</div>
-            <div class="kpi-value text-money" style="font-size:1.2rem">₡ @Model.TotalPendingAmount.ToString("N2")</div>
-            <div class="kpi-sub">Saldo por pagar</div>
+        <div class="kpi" style="border-left:4px solid var(--danger-500)">
+            <span class="kpi__label">Pendiente CRC</span>
+            <span class="kpi__value" style="color:var(--danger-600)">₡ @Model.TotalPendingAmount.ToString("N2")</span>
+            <span class="kpi__sub">Saldo por pagar</span>
         </div>
     </div>
     <!-- USD cuota -->
     <div class="col-6 col-xl">
-        <div class="kpi-card green">
-            <div class="kpi-icon">📅</div>
-            <div class="kpi-label">Cuota mensual USD</div>
-            <div class="kpi-value text-money" style="font-size:1.2rem">$ @Model.TotalMonthlyCommitmentUsd.ToString("N2")</div>
-            <div class="kpi-sub">Compromiso mensual</div>
+        <div class="kpi" style="border-left:4px solid var(--success-500)">
+            <span class="kpi__label">Cuota USD</span>
+            <span class="kpi__value" style="color:var(--success-600)">$ @Model.TotalMonthlyCommitmentUsd.ToString("N2")</span>
+            <span class="kpi__sub">Compromiso mensual</span>
         </div>
     </div>
     <!-- USD pendiente -->
     <div class="col-6 col-xl">
-        <div class="kpi-card" style="border-left:3px solid #0369a1">
-            <div class="kpi-icon" style="color:#0369a1">💵</div>
-            <div class="kpi-label">Pendiente USD</div>
-            <div class="kpi-value text-money" style="font-size:1.2rem;color:#dc2626">$ @Model.TotalPendingAmountUsd.ToString("N2")</div>
-            <div class="kpi-sub">Saldo por pagar</div>
+        <div class="kpi" style="border-left:4px solid #818CF8">
+            <span class="kpi__label">Pendiente USD</span>
+            <span class="kpi__value" style="color:var(--danger-600)">$ @Model.TotalPendingAmountUsd.ToString("N2")</span>
+            <span class="kpi__sub">Saldo por pagar</span>
         </div>
     </div>
 </div>
 
 <!-- Tabs -->
-<ul class="nav nav-tabs mb-3" id="financingTabs">
-    <li class="nav-item">
-        <a class="nav-link @(Model.Tab == "activos" ? "active" : "")" href="/financing?tab=activos">
-            Activos <span class="badge bg-primary ms-1">@Model.Activos.Count</span>
+<div style="display:flex;gap:var(--sp-1);background:var(--neutral-100);border-radius:var(--radius-xl);padding:var(--sp-1);margin-bottom:var(--sp-4);width:fit-content">
+    @foreach (var t in new[] {
+        ("activos",    "Activos",    Model.Activos.Count),
+        ("pagados",    "Pagados",    Model.Pagados.Count),
+        ("cancelados", "Cancelados", Model.Cancelados.Count)
+    })
+    {
+        var isActive = Model.Tab == t.Item1;
+        <a href="/financing?tab=@t.Item1"
+           style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4);border-radius:var(--radius-lg);font-size:var(--text-sm);font-weight:600;text-decoration:none;transition:all var(--dur-base);@(isActive ? "background:var(--surface-card);color:var(--text-primary);box-shadow:var(--shadow-sm)" : "color:var(--text-muted)")">
+            @t.Item2
+            <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:@(isActive ? "var(--brand-50)" : "var(--neutral-200)");color:@(isActive ? "var(--brand-600)" : "var(--text-muted)")">@t.Item3</span>
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Tab == "pagados" ? "active" : "")" href="/financing?tab=pagados">
-            Pagados <span class="badge bg-success ms-1">@Model.Pagados.Count</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Tab == "cancelados" ? "active" : "")" href="/financing?tab=cancelados">
-            Cancelados <span class="badge bg-secondary ms-1">@Model.Cancelados.Count</span>
-        </a>
-    </li>
-</ul>
+    }
+</div>
 
 @{
     var displayed = Model.Tab switch
@@ -106,22 +95,25 @@
 }
 
 <div class="card">
-    <div class="card-body p-0">
-        @if (!displayed.Any())
-        {
-            <div class="empty-state py-5">
-                <div class="empty-state-icon">📋</div>
-                <div class="empty-state-title">Sin financiamientos @Model.Tab</div>
-                <div class="empty-state-text">
+    <div class="card__header">
+        <span class="card__title">📋 Financiamientos @Model.Tab</span>
+        <span style="font-size:var(--text-xs);color:var(--text-muted)">@displayed.Count registro(s)</span>
+    </div>
+    @if (!displayed.Any())
+    {
+        <div class="empty">
+                <div class="empty__icon">📋</div>
+                <p class="empty__title">Sin financiamientos @Model.Tab</p>
+                <p class="empty__text">
                     @if (Model.Tab == "activos")
                     {
-                        <span>Haz clic en <strong>+ Nuevo financiamiento</strong> para agregar uno.</span>
+                        <span>Haz clic en <strong>Nuevo financiamiento</strong> para agregar uno.</span>
                     }
                     else
                     {
                         <span>No hay financiamientos en este estado.</span>
                     }
-                </div>
+                </p>
             </div>
         }
         else
@@ -153,7 +145,7 @@
                             <tr>
                                 <td>
                                     <div style="font-weight:600;font-size:14px">@f.Merchant</div>
-                                    <div style="font-size:11px;color:#94a3b8">
+                                    <div style="font-size:11px;color:var(--text-muted)">
                                         @f.Bank
                                         @if (f.Card != null)
                                         {
@@ -172,28 +164,28 @@
                                 <td>
                                     <div style="font-size:13px">
                                         <strong>@f.PaidInstallments</strong>
-                                        <span style="color:#94a3b8">/ @f.Months</span>
+                                        <span style="color:var(--text-muted)">/ @f.Months</span>
                                     </div>
                                     @if (f.Status == "activo")
                                     {
-                                        <div style="font-size:11px;color:#64748b">@f.RemainingInstallments por pagar</div>
+                                        <div style="font-size:11px;color:var(--text-muted)">@f.RemainingInstallments por pagar</div>
                                     }
                                 </td>
-                                <td style="font-size:12px;color:#475569">
+                                <td style="font-size:12px;color:var(--text-secondary)">
                                     @if (f.NextPaymentDate.HasValue)
                                     {
                                         var daysLeft = (f.NextPaymentDate.Value.Date - DateTime.UtcNow.Date).Days;
                                         <div>@f.NextPaymentDate.Value.ToString("dd/MM/yyyy")</div>
-                                        <div style="font-size:11px;color:@(daysLeft <= 7 ? "#dc2626" : "#94a3b8")">
+                                        <div style="font-size:11px;color:@(daysLeft <= 7 ? "#F87171" : "#71717A")">
                                             @(daysLeft <= 0 ? "Vencida" : $"en {daysLeft} días")
                                         </div>
                                     }
                                     else
                                     {
-                                        <span style="color:#94a3b8">—</span>
+                                        <span style="color:var(--text-muted)">—</span>
                                     }
                                 </td>
-                                <td class="text-money" style="font-size:13px;font-weight:600;color:@(f.PendingAmount > 0 ? "#dc2626" : "#16a34a")">
+                                <td class="text-money" style="font-size:13px;font-weight:600;color:@(f.PendingAmount > 0 ? "#F87171" : "#34D399")">
                                     @if (f.PendingAmount > 0)
                                     {
                                         <span>@(f.Currency == "USD" ? "$" : "₡") @f.PendingAmount.ToString("N2")</span>
@@ -271,7 +263,6 @@
                 </table>
             </div>
         }
-    </div>
 </div>
 
 <!-- ── Modal: Add Financing ──────────────────────────────────────────────────── -->
@@ -329,12 +320,12 @@
                         <div class="col-md-3">
                             <label class="form-label d-flex align-items-center gap-1">
                                 Cuota mensual *
-                                <span id="addAutoTag" style="display:none;font-size:10px;background:#dbeafe;color:#2563eb;padding:1px 6px;border-radius:10px;font-weight:600">auto</span>
+                                <span id="addAutoTag" style="display:none;font-size:10px;background:rgba(99,102,241,0.15);color:#818CF8;padding:1px 6px;border-radius:10px;font-weight:600;border:1px solid rgba(99,102,241,.2)">auto</span>
                             </label>
                             <input id="addMonthlyPayment" name="MonthlyPayment" type="number" step="0.01" min="0"
                                    class="form-control" placeholder="0.00" required
                                    oninput="clearAutoTag('add')" />
-                            <div id="addMonthlyHint" style="font-size:11px;color:#94a3b8;margin-top:3px"></div>
+                            <div id="addMonthlyHint" style="font-size:11px;color:var(--text-muted);margin-top:3px"</div>
                         </div>
                         <div id="addRateFields">
                             <div class="row g-3">
@@ -431,30 +422,30 @@
                             <label class="form-label">Cuotas pagadas</label>
                             <input name="PaidInstallments" id="editPaidInstallments" type="number" min="0"
                                    class="form-control" oninput="updatePendingPreview()" />
-                            <div style="font-size:10px;color:#94a3b8;margin-top:2px">Cuotas ya pagadas</div>
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Cuotas ya pagadas</div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label d-flex align-items-center gap-1">
                                 Cuota mensual
-                                <span id="editAutoTag" style="display:none;font-size:10px;background:#dbeafe;color:#2563eb;padding:1px 6px;border-radius:10px;font-weight:600">auto</span>
+                                <span id="editAutoTag" style="display:none;font-size:10px;background:rgba(99,102,241,0.15);color:#818CF8;padding:1px 6px;border-radius:10px;font-weight:600;border:1px solid rgba(99,102,241,.2)">auto</span>
                             </label>
                             <input name="MonthlyPayment" id="editMonthlyPayment" type="number" step="0.01"
                                    class="form-control" oninput="clearAutoTag('edit');updatePendingPreview()" />
-                            <div id="editMonthlyHint" style="font-size:11px;color:#94a3b8;margin-top:3px"></div>
+                            <div id="editMonthlyHint" style="font-size:11px;color:var(--text-muted);margin-top:3px"</div>
                         </div>
                         <!-- Live recalculation preview -->
                         <div class="col-12">
-                            <div id="editPendingPreview" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;font-size:12px">
+                            <div id="editPendingPreview" style="display:none;background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:8px;padding:10px 14px;font-size:12px">
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <div>
-                                        <span style="color:#64748b">Cuotas pendientes: </span>
+                                        <span style="color:var(--text-muted)">Cuotas pendientes: </span>
                                         <strong id="previewRemaining">0</strong>
-                                        <span style="color:#94a3b8"> de </span>
+                                        <span style="color:var(--text-muted)"> de </span>
                                         <span id="previewTotal">0</span>
                                     </div>
                                     <div>
-                                        <span style="color:#64748b">Monto pendiente: </span>
-                                        <strong id="previewPending" style="color:#dc2626;font-size:14px">—</strong>
+                                        <span style="color:var(--text-muted)">Monto pendiente: </span>
+                                        <strong id="previewPending" style="color:#F87171;font-size:14px">—</strong>
                                     </div>
                                 </div>
                             </div>

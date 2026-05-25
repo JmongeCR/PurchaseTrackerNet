@@ -1,0 +1,49 @@
+name: Build & Deploy to siteasp.net
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:   # permite lanzarlo manualmente desde GitHub
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest   # WebDeploy requiere Windows
+
+    steps:
+      # 1. Checkout del código
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Instalar .NET 10
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # 3. Restaurar dependencias
+      - name: Restore
+        run: dotnet restore PurchaseTracker.Web/PurchaseTracker.Web.csproj
+
+      # 4. Build en Release
+      - name: Build
+        run: dotnet build PurchaseTracker.Web/PurchaseTracker.Web.csproj -c Release --no-restore
+
+      # 5. Publish → carpeta local
+      - name: Publish
+        run: dotnet publish PurchaseTracker.Web/PurchaseTracker.Web.csproj -c Release --no-build -o ./publish-output
+
+      # 6. Deploy via Web Deploy (MSDeploy) a siteasp.net
+      - name: Deploy via Web Deploy
+        run: |
+          $msdeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          & $msdeployPath `
+            -verb:sync `
+            -source:contentPath="$(Resolve-Path ./publish-output)" `
+            -dest:contentPath="site60072",`
+                  computerName="https://site60072.siteasp.net:8172/msdeploy.axd?site=site60072",`
+                  userName="site60072",`
+                  password="${{ secrets.WEBDEPLOY_PASSWORD }}",`
+                  authType="Basic" `
+            -allowUntrusted `
+            -enableRule:AppOffline
+        shell: pwsh

@@ -1,0 +1,204 @@
+@model CreateTransactionPageViewModel
+@{
+    ViewData["Title"] = "Nuevo movimiento";
+    var f = Model.Form;
+    var banks = new[] { "BCR", "BAC", "BN", "BNCR", "Davivienda", "Promerica", "Otro" };
+}
+
+<form method="post" action="/transactions/add" id="createForm" autocomplete="off">
+    @Html.AntiForgeryToken()
+
+    <!-- ── Amount hero ────────────────────────────────────────── -->
+    <div style="background:var(--surface-card);border-radius:var(--radius-2xl);padding:var(--sp-6) var(--sp-5) var(--sp-5);margin-bottom:var(--sp-4);box-shadow:var(--shadow-sm);text-align:center">
+
+        <!-- Movement type pills -->
+        <div style="display:flex;justify-content:center;gap:var(--sp-2);margin-bottom:var(--sp-5)">
+            @foreach (var (label, val) in new[] { ("Gasto","compra"), ("Ingreso","ingreso"), ("Transferencia","transferencia") })
+            {
+                var isActive = f.MovementType == val;
+                <button type="button"
+                        class="btn btn--sm @(isActive ? "btn--primary" : "btn--ghost") type-pill"
+                        data-type="@val">@label</button>
+            }
+        </div>
+        <input type="hidden" name="MovementType" id="movementTypeInput" value="@f.MovementType" />
+
+        <!-- Amount numpad display -->
+        <div style="position:relative;display:inline-flex;align-items:baseline;gap:var(--sp-2);margin-bottom:var(--sp-3)">
+            <span id="currencySymbol" style="font-size:1.75rem;font-weight:700;color:var(--text-muted)">
+                @(f.Currency == "USD" ? "$" : "₡")
+            </span>
+            <div id="amountDisplay"
+                 style="font-size:3.5rem;font-weight:800;letter-spacing:-0.03em;color:var(--text-primary);min-width:120px;line-height:1">
+                @(f.Amount > 0 ? f.Amount.ToString("N2") : "0")
+            </div>
+        </div>
+        <input type="hidden" name="Amount" id="amountInput" value="@f.Amount" />
+
+        <!-- Currency toggle -->
+        <div style="display:flex;justify-content:center;gap:var(--sp-2);margin-bottom:var(--sp-4)">
+            <button type="button" class="btn btn--sm @(f.Currency != "USD" ? "btn--primary" : "btn--ghost") cur-btn" data-cur="CRC">₡ CRC</button>
+            <button type="button" class="btn btn--sm @(f.Currency == "USD" ? "btn--primary" : "btn--ghost") cur-btn" data-cur="USD">$ USD</button>
+        </div>
+        <input type="hidden" name="Currency" id="currencyInput" value="@f.Currency" />
+
+        <!-- Numpad -->
+        <div class="numpad" style="max-width:320px;margin:0 auto">
+            @foreach (var key in new[] { "1","2","3","4","5","6","7","8","9",".","0","⌫" })
+            {
+                <button type="button"
+                        class="numpad__key @(key == "⌫" ? "numpad__key--action" : "")"
+                        data-key="@(key == "⌫" ? "backspace" : key)">@key</button>
+            }
+        </div>
+    </div>
+
+    <!-- ── Details card ───────────────────────────────────────── -->
+    <div style="background:var(--surface-card);border-radius:var(--radius-2xl);padding:var(--sp-5);margin-bottom:var(--sp-4);box-shadow:var(--shadow-sm)">
+        <div style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:var(--sp-4)">Detalle del movimiento</div>
+
+        <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+
+            <!-- Merchant -->
+            <div>
+                <label class="form-label" for="Merchant">Comercio / descripción *</label>
+                <input class="form-control" id="Merchant" name="Merchant" placeholder="Supermercado, Netflix…"
+                       value="@f.Merchant" required />
+            </div>
+
+            <!-- Bank -->
+            <div>
+                <label class="form-label" for="Bank">Banco *</label>
+                <select class="form-select" id="Bank" name="Bank" required>
+                    <option value="">Seleccionar banco</option>
+                    @foreach (var b in banks)
+                    {
+                        if (f.Bank == b) { <option value="@b" selected>@b</option> }
+                        else             { <option value="@b">@b</option> }
+                    }
+                </select>
+            </div>
+
+            <!-- Date + Status row -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)">
+                <div>
+                    <label class="form-label" for="TransactionDate">Fecha *</label>
+                    <input class="form-control" type="date" id="TransactionDate" name="TransactionDate"
+                           value="@f.TransactionDate.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div>
+                    <label class="form-label" for="Status">Estado</label>
+                    <select class="form-select" id="Status" name="Status">
+                        @foreach (var s in new[] { "Aprobada", "Pendiente", "Rechazada" })
+                        {
+                            if (f.Status == s) { <option value="@s" selected>@s</option> }
+                            else               { <option value="@s">@s</option> }
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <!-- Card -->
+            <div>
+                <label class="form-label" for="CardId">Tarjeta</label>
+                <select class="form-select" id="CardId" name="CardId">
+                    <option value="">Sin tarjeta</option>
+                    @foreach (var c in Model.Cards)
+                    {
+                        var cardLabel = $"{c.Bank} — {(string.IsNullOrWhiteSpace(c.CardAlias) ? c.Currency : c.CardAlias)}{(c.Last4 != null ? $" ···· {c.Last4}" : "")}";
+                        if (f.CardId == c.CardId) { <option value="@c.CardId" selected>@cardLabel</option> }
+                        else                       { <option value="@c.CardId">@cardLabel</option> }
+                    }
+                </select>
+            </div>
+
+            <!-- Category -->
+            <div>
+                <label class="form-label" for="CategoryId">Categoría</label>
+                <select class="form-select" id="CategoryId" name="CategoryId">
+                    <option value="">Sin categoría</option>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        var catLabel = $"{cat.IconEmoji ?? ""} {cat.Name}".Trim();
+                        if (f.CategoryId == cat.CategoryId) { <option value="@cat.CategoryId" selected>@catLabel</option> }
+                        else                                 { <option value="@cat.CategoryId">@catLabel</option> }
+                    }
+                </select>
+            </div>
+
+            <!-- Description + Notes -->
+            <div>
+                <label class="form-label" for="Description">Notas (opcional)</label>
+                <textarea class="form-control" id="Description" name="Description"
+                          rows="2" placeholder="Información adicional…">@f.Description</textarea>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Submit ──────────────────────────────────────────────── -->
+    <div style="display:flex;gap:var(--sp-3);margin-bottom:var(--sp-6)">
+        <a href="/transactions" class="btn btn--ghost" style="flex:0 0 auto">
+            <i data-lucide="arrow-left" style="width:16px;height:16px"></i>
+            Cancelar
+        </a>
+        <button type="submit" class="btn btn--primary" style="flex:1;font-weight:700" id="submitBtn">
+            <i data-lucide="check" style="width:16px;height:16px"></i>
+            Guardar movimiento
+        </button>
+    </div>
+
+</form>
+
+@section Scripts {
+<script>
+(function () {
+    // ── Numpad wiring ──────────────────────────────────────────
+    const displayEl = document.getElementById('amountDisplay');
+    const inputEl   = document.getElementById('amountInput');
+    const numpad    = new AmountNumpad({ displayEl, inputEl });
+
+    document.querySelectorAll('.numpad__key[data-key]').forEach(key => {
+        key.addEventListener('click', () => numpad.press(key.dataset.key));
+    });
+
+    // ── Currency toggle ────────────────────────────────────────
+    const symEl = document.getElementById('currencySymbol');
+    document.querySelectorAll('.cur-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.cur-btn').forEach(b => {
+                b.classList.remove('btn--primary'); b.classList.add('btn--ghost');
+            });
+            this.classList.remove('btn--ghost'); this.classList.add('btn--primary');
+            const cur = this.dataset.cur;
+            document.getElementById('currencyInput').value = cur;
+            symEl.textContent = cur === 'USD' ? '$' : '₡';
+        });
+    });
+
+    // ── Type pills ─────────────────────────────────────────────
+    document.querySelectorAll('.type-pill').forEach(pill => {
+        pill.addEventListener('click', function () {
+            document.querySelectorAll('.type-pill').forEach(p => {
+                p.classList.remove('btn--primary'); p.classList.add('btn--ghost');
+            });
+            this.classList.remove('btn--ghost'); this.classList.add('btn--primary');
+            document.getElementById('movementTypeInput').value = this.dataset.type;
+        });
+    });
+
+    // ── Submit validation ─────────────────────────────────────
+    document.getElementById('createForm').addEventListener('submit', function (e) {
+        const amt = parseFloat(inputEl.value);
+        if (!amt || amt <= 0) {
+            e.preventDefault();
+            displayEl.style.animation = 'none';
+            displayEl.offsetHeight;
+            displayEl.style.animation = 'shake .3s ease-out';
+            displayEl.style.color = 'var(--danger-500)';
+            setTimeout(() => displayEl.style.color = '', 800);
+        }
+    });
+})();
+</script>
+}

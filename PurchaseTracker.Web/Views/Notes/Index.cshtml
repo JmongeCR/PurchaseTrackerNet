@@ -11,40 +11,33 @@
     };
 }
 
-<div class="page-header">
-    <div>
-        <div class="page-header-title">📝 Notas Personales</div>
-        <div class="page-header-sub">Gastos compartidos, deudas y cobros</div>
-    </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addNoteModal">
-        + Nueva nota
+<div class="d-flex justify-content-end mb-4">
+    <button class="btn btn--primary btn--sm" data-bs-toggle="modal" data-bs-target="#addNoteModal">
+        <i data-lucide="plus" style="width:16px;height:16px"></i> Nueva nota
     </button>
 </div>
 
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
     <div class="col-sm-4">
-        <div class="kpi-card green">
-            <div class="kpi-icon">📥</div>
-            <div class="kpi-label">Por cobrar</div>
-            <div class="kpi-value text-money" style="font-size:1.3rem">₡ @Model.TotalToCollect.ToString("N0")</div>
-            <div class="kpi-sub">Pendiente de recibir</div>
+        <div class="kpi" style="border-left:4px solid var(--success-500)">
+            <span class="kpi__label">📥 Por cobrar</span>
+            <span class="kpi__value" style="color:var(--success-600)">₡ @Model.TotalToCollect.ToString("N0")</span>
+            <span class="kpi__sub">Pendiente de recibir</span>
         </div>
     </div>
     <div class="col-sm-4">
-        <div class="kpi-card red">
-            <div class="kpi-icon">📤</div>
-            <div class="kpi-label">Por pagar</div>
-            <div class="kpi-value text-money" style="font-size:1.3rem">₡ @Model.TotalToPay.ToString("N0")</div>
-            <div class="kpi-sub">Pendiente de pagar</div>
+        <div class="kpi" style="border-left:4px solid var(--danger-500)">
+            <span class="kpi__label">📤 Por pagar</span>
+            <span class="kpi__value" style="color:var(--danger-600)">₡ @Model.TotalToPay.ToString("N0")</span>
+            <span class="kpi__sub">Pendiente de pagar</span>
         </div>
     </div>
     <div class="col-sm-4">
-        <div class="kpi-card orange">
-            <div class="kpi-icon">⏳</div>
-            <div class="kpi-label">Pendientes</div>
-            <div class="kpi-value">@Model.PendingCount</div>
-            <div class="kpi-sub">Notas sin resolver</div>
+        <div class="kpi" style="border-left:4px solid var(--warning-500)">
+            <span class="kpi__label">⏳ Pendientes</span>
+            <span class="kpi__value" style="color:var(--warning-600)">@Model.PendingCount</span>
+            <span class="kpi__sub">Notas sin resolver</span>
         </div>
     </div>
 </div>
@@ -70,26 +63,26 @@
 
 <style>
 .np-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
-#personPanel{display:none;border-left:4px solid #6366f1;background:#f8f7ff;border-radius:0 12px 12px 0;padding:16px 20px;margin-bottom:16px}
+#personPanel{display:none;border-left:3px solid var(--accent);background:var(--bg-elevated);border-radius:0 var(--radius-lg) var(--radius-lg) 0;padding:16px 20px;margin-bottom:16px}
 .pp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.pp-title{font-size:15px;font-weight:700;color:#3730a3;display:flex;align-items:center;gap:8px}
-.pp-note-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #e2e8f0}
+.pp-title{font-size:15px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+.pp-note-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .pp-note-row:last-child{border-bottom:none}
-.pp-dir-badge{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
-.pp-collect-badge{background:#dcfce7;color:#16a34a}
-.pp-pay-badge{background:#fee2e2;color:#dc2626}
-.pp-status{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
-.pp-st-pendiente{background:#dbeafe;color:#2563eb}
-.pp-st-parcial{background:#fef3c7;color:#d97706}
-.pp-st-pagado{background:#dcfce7;color:#16a34a}
+.pp-dir-badge{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid}
+.pp-collect-badge{background:rgba(16,185,129,0.12);color:#34D399;border-color:rgba(16,185,129,.2)}
+.pp-pay-badge{background:rgba(239,68,68,0.12);color:#F87171;border-color:rgba(239,68,68,.2)}
+.pp-status{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid}
+.pp-st-pendiente{background:rgba(99,102,241,0.12);color:#818CF8;border-color:rgba(99,102,241,.2)}
+.pp-st-parcial{background:rgba(245,158,11,0.12);color:#FCD34D;border-color:rgba(245,158,11,.2)}
+.pp-st-pagado{background:rgba(16,185,129,0.12);color:#34D399;border-color:rgba(16,185,129,.2)}
 </style>
 
 <!-- Person Summary -->
 @if (Model.PersonSummaries.Any())
 {
-    <div class="card mb-3">
-        <div class="card-header">👥 Resumen por persona</div>
-        <div class="card-body">
+    <div class="card" style="margin-bottom:var(--sp-3)">
+        <div class="card__header"><span class="card__title">👥 Resumen por persona</span></div>
+        <div class="card__body">
             <div class="d-flex align-items-center gap-3">
                 <select id="personSelect" class="form-select" style="max-width:280px" onchange="onPersonChange(this.value)">
                     <option value="">— Seleccionar persona —</option>
@@ -117,158 +110,131 @@
 }
 
 <!-- Tabs -->
-<ul class="nav nav-tabs mb-3" id="notesTabs">
-    <li class="nav-item">
-        <a class="nav-link @(Model.Tab == "todos" ? "active" : "")" href="/notes?tab=todos">Todos</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Tab == "cobrar" ? "active" : "")" href="/notes?tab=cobrar">
-            Por cobrar <span class="badge ms-1" style="background:#dcfce7;color:#16a34a">@Model.Notes.Count(n => n.Direction == "cobrar" && n.Status != "pagado")</span>
+<div style="display:flex;gap:var(--sp-1);background:var(--neutral-100);border-radius:var(--radius-xl);padding:var(--sp-1);margin-bottom:var(--sp-4);width:fit-content;flex-wrap:wrap">
+    @{
+        var noteTabItems = new[] {
+            ("todos",    "Todos",       Model.Notes.Count),
+            ("cobrar",   "📥 Por cobrar", Model.Notes.Count(n => n.Direction == "cobrar" && n.Status != "pagado")),
+            ("pagar",    "📤 Por pagar",  Model.Notes.Count(n => n.Direction == "pagar"  && n.Status != "pagado")),
+            ("pagados",  "✅ Pagados",    Model.Notes.Count(n => n.Status == "pagado"))
+        };
+    }
+    @foreach (var t in noteTabItems)
+    {
+        var isActive = Model.Tab == t.Item1;
+        <a href="/notes?tab=@t.Item1"
+           style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4);border-radius:var(--radius-lg);font-size:var(--text-sm);font-weight:600;text-decoration:none;transition:all var(--dur-base);@(isActive ? "background:var(--surface-card);color:var(--text-primary);box-shadow:var(--shadow-sm)" : "color:var(--text-muted)")">
+            @t.Item2
+            <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:@(isActive ? "var(--brand-50)" : "var(--neutral-200)");color:@(isActive ? "var(--brand-600)" : "var(--text-muted)")">@t.Item3</span>
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Tab == "pagar" ? "active" : "")" href="/notes?tab=pagar">
-            Por pagar <span class="badge ms-1" style="background:#fee2e2;color:#dc2626">@Model.Notes.Count(n => n.Direction == "pagar" && n.Status != "pagado")</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Tab == "pagados" ? "active" : "")" href="/notes?tab=pagados">
-            Pagados <span class="badge bg-secondary ms-1">@Model.Notes.Count(n => n.Status == "pagado")</span>
-        </a>
-    </li>
-</ul>
+    }
+</div>
 
 <!-- Notes Table -->
 <div class="card">
-    <div class="card-body p-0">
-        @{
-            var notes = FilteredNotes().ToList();
-        }
-        @if (!notes.Any())
-        {
-            <div class="empty-state py-5">
-                <div class="empty-state-icon">📝</div>
-                <div class="empty-state-title">Sin notas aquí</div>
-                <div class="empty-state-text">
+    @{
+        var notes = FilteredNotes().ToList();
+    }
+    <div class="card__header">
+        <span class="card__title">📝 Notas</span>
+        <span style="font-size:var(--text-xs);color:var(--text-muted)">@notes.Count nota(s)</span>
+    </div>
+    @if (!notes.Any())
+    {
+        <div class="empty">
+                <div class="empty__icon">📝</div>
+                <p class="empty__title">Sin notas aquí</p>
+                <p class="empty__text">
                     @if (Model.Tab == "todos")
                     {
-                        <span>Haz clic en <strong>+ Nueva nota</strong> para registrar un cobro o pago.</span>
+                        <span>Haz clic en <strong>Nueva nota</strong> para registrar un cobro o pago.</span>
                     }
                     else
                     {
                         <span>No hay notas en este filtro.</span>
                     }
-                </div>
+                </p>
             </div>
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Título / Persona</th>
-                            <th>Dirección</th>
-                            <th>Monto</th>
-                            <th>Pagado</th>
-                            <th>Pendiente</th>
-                            <th>Estado</th>
-                            <th>Fecha</th>
-                            <th style="text-align:right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var n in notes)
-                        {
-                            var nTitleJs = n.Title.Replace("'", "\\'");
-                            <tr class="@(n.Status == "pagado" ? "table-secondary" : "")">
-                                <td>
-                                    <div style="font-weight:600;font-size:14px">@n.Title</div>
-                                    @if (!string.IsNullOrWhiteSpace(n.Person))
-                                    {
-                                        <div style="font-size:11px;color:#94a3b8">👤 @n.Person</div>
-                                    }
-                                    @if (n.Category != null)
-                                    {
-                                        <span class="badge-cat" style="background:@(n.Category.Color)22;color:@n.Category.Color;border:1px solid @(n.Category.Color)44;font-size:10px">
-                                            @n.Category.IconEmoji @n.Category.Name
-                                        </span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (n.Direction == "cobrar")
-                                    {
-                                        <span style="background:#dcfce7;color:#16a34a;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">📥 Cobrar</span>
-                                    }
-                                    else
-                                    {
-                                        <span style="background:#fee2e2;color:#dc2626;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">📤 Pagar</span>
-                                    }
-                                </td>
-                                <td class="text-money" style="font-size:13px;font-weight:600">
-                                    @(n.Currency == "USD" ? "$" : "₡") @n.Amount.ToString("N0")
-                                </td>
-                                <td style="font-size:12px;color:#64748b">
-                                    @if (n.PaidAmount > 0)
-                                    {
-                                        <span>@(n.Currency == "USD" ? "$" : "₡") @n.PaidAmount.ToString("N0")</span>
-                                    }
-                                    else
-                                    {
-                                        <span style="color:#94a3b8">—</span>
-                                    }
-                                </td>
-                                <td style="font-size:13px;font-weight:600;color:@(n.PendingAmount > 0 ? "#dc2626" : "#16a34a")">
-                                    @if (n.PendingAmount > 0)
-                                    {
-                                        <span>@(n.Currency == "USD" ? "$" : "₡") @n.PendingAmount.ToString("N0")</span>
-                                    }
-                                    else
-                                    {
-                                        <span>✅</span>
-                                    }
-                                </td>
-                                <td>
-                                    @{
-                                        var (statusBg, statusColor, statusLabel) = n.Status switch
-                                        {
-                                            "pagado" => ("#dcfce7", "#16a34a", "Pagado"),
-                                            "parcial" => ("#fef3c7", "#d97706", "Parcial"),
-                                            _ => ("#dbeafe", "#2563eb", "Pendiente")
-                                        };
-                                    }
-                                    <span style="background:@statusBg;color:@statusColor;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">
-                                        @statusLabel
-                                    </span>
-                                </td>
-                                <td style="font-size:12px;color:#94a3b8">@n.NoteDate.ToString("dd/MM/yyyy")</td>
-                                <td style="text-align:right">
-                                    <div class="d-flex gap-1 justify-content-end">
-                                        @if (n.Status != "pagado")
-                                        {
-                                            <button class="btn btn-sm btn-success" title="Registrar pago"
-                                                    onclick="openPayNote(@n.NoteId, '@nTitleJs', @n.PendingAmount, '@n.Currency')">
-                                                💰
-                                            </button>
-                                        }
-                                        <button class="btn btn-sm btn-secondary" title="Editar"
-                                                onclick="openEditNote(@n.NoteId, '@nTitleJs', '@(n.Description?.Replace("'","\\'") ?? "")', '@(n.Person?.Replace("'","\\'") ?? "")', @n.Amount, '@n.Currency', '@n.NoteDate.ToString("yyyy-MM-dd")', '@n.Direction', @(n.CategoryId?.ToString() ?? "null"), '@(n.Notes?.Replace("'","\\'") ?? "")')">
-                                            ✏️
-                                        </button>
-                                        <form method="post" action="/notes/delete/@n.NoteId" style="display:inline"
-                                              onsubmit="return confirm('¿Eliminar la nota @nTitleJs?')">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">🗑</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <div class="tx-feed">
+                @foreach (var n in notes)
+                {
+                    var sym        = n.Currency == "USD" ? "$" : "₡";
+                    var isCollect  = n.Direction == "cobrar";
+                    var avatarBg   = isCollect ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
+                    var avatarColor= isCollect ? "#34D399" : "#F87171";
+                    var dirLabel   = isCollect ? "📥 Cobrar" : "📤 Pagar";
+                    var dirBg      = isCollect ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
+                    var dirBorder  = isCollect ? "rgba(16,185,129,.25)"  : "rgba(239,68,68,.25)";
+                    var pendColor  = n.PendingAmount > 0 ? "#F87171" : "#34D399";
+                    var nTitleJs   = n.Title.Replace("'", "\\'");
+                    var (sBg, sColor, sLabel) = n.Status switch
+                    {
+                        "pagado"  => ("rgba(16,185,129,0.12)", "#34D399", "Pagado"),
+                        "parcial" => ("rgba(245,158,11,0.12)",  "#FCD34D", "Parcial"),
+                        _         => ("rgba(99,102,241,0.12)",  "#818CF8", "Pendiente")
+                    };
+
+                    <div class="tx-item" style="align-items:flex-start">
+
+                        <!-- Direction avatar -->
+                        <div class="tx-item__merchant" style="background:@avatarBg;color:@avatarColor;font-size:1.1rem;flex-shrink:0">
+                            @(isCollect ? "📥" : "📤")
+                        </div>
+
+                        <!-- Main info -->
+                        <div class="tx-item__info">
+                            <div class="tx-item__name">@n.Title</div>
+                            <div class="tx-item__meta" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);margin-top:2px">
+                                <span style="background:@dirBg;color:@(isCollect ? "#34D399" : "#F87171");border:1px solid @dirBorder;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700">@dirLabel</span>
+                                @if (!string.IsNullOrWhiteSpace(n.Person))
+                                {
+                                    <span>👤 @n.Person</span>
+                                }
+                                @if (n.Category != null)
+                                {
+                                    <span class="tx-item__chip" style="background:@(n.Category.Color)22;color:@n.Category.Color">@n.Category.IconEmoji @n.Category.Name</span>
+                                }
+                                <span style="color:var(--text-disabled)">@n.NoteDate.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <!-- Status + action buttons -->
+                            <div style="display:flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-2);flex-wrap:wrap">
+                                <span style="background:@sBg;color:@sColor;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">@sLabel</span>
+                                @if (n.Status != "pagado")
+                                {
+                                    <button class="btn btn--ghost btn--sm" style="padding:2px 10px;font-size:11px;height:auto;color:var(--success-600)"
+                                            onclick="openPayNote(@n.NoteId, '@nTitleJs', @n.PendingAmount, '@n.Currency')">
+                                        💰 Pagar
+                                    </button>
+                                }
+                                <button class="btn btn--ghost btn--sm" style="padding:2px 8px;font-size:11px;height:auto"
+                                        onclick="openEditNote(@n.NoteId,'@nTitleJs','@(n.Description?.Replace("'","\\'") ?? "")','@(n.Person?.Replace("'","\\'") ?? "")',@n.Amount,'@n.Currency','@n.NoteDate.ToString("yyyy-MM-dd")','@n.Direction',@(n.CategoryId?.ToString() ?? "null"),'@(n.Notes?.Replace("'","\\'") ?? "")')">
+                                    ✏️
+                                </button>
+                                <form method="post" action="/notes/delete/@n.NoteId" style="display:inline"
+                                      onsubmit="return confirm('¿Eliminar @nTitleJs?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn--ghost btn--sm" style="padding:2px 8px;font-size:11px;height:auto;color:var(--danger-500)">🗑</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Amount right -->
+                        <div class="tx-item__right" style="text-align:right;flex-shrink:0">
+                            <div class="tx-item__amount" style="color:@pendColor">
+                                @sym @n.PendingAmount.ToString("N0")
+                            </div>
+                            <div style="font-size:var(--text-xs);color:var(--text-disabled);margin-top:2px">
+                                Total @sym @n.Amount.ToString("N0")
+                            </div>
+                        </div>
+
+                    </div>
+                }
             </div>
         }
-    </div>
 </div>
 
 <!-- ── Modal: Add Note ───────────────────────────────────────────────────────── -->
@@ -353,12 +319,12 @@
             <form method="post" id="payNoteForm">
                 @Html.AntiForgeryToken()
                 <div class="modal-body">
-                    <p id="payNoteTitle" style="font-size:13px;color:#475569;margin-bottom:12px;font-weight:600"></p>
-                    <p id="payNotePending" style="font-size:12px;color:#94a3b8;margin-bottom:12px"></p>
+                    <p id="payNoteTitle" style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;font-weight:600"></p>
+                    <p id="payNotePending" style="font-size:12px;color:var(--text-muted);margin-bottom:12px"></p>
                     <label class="form-label">Monto a pagar *</label>
                     <input name="PaymentAmount" id="payNoteAmount" type="number" step="0.01" min="0.01"
                            class="form-control" placeholder="0.00" required />
-                    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Puedes registrar pagos parciales.</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Puedes registrar pagos parciales.</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -465,13 +431,13 @@ function showPersonPanel(person) {
     const toPay     = notes.filter(n => n.direction === 'pagar').reduce((s, n) => s + n.pendingAmount, 0);
     const currency  = notes.length ? notes[0].currency : 'CRC';
     let totalsHtml = '';
-    if (toCollect > 0) totalsHtml += `<span style="color:#16a34a;font-weight:600">📥 Por cobrar: ${fmt(toCollect, currency)}</span>`;
-    if (toPay > 0)     totalsHtml += `<span style="color:#dc2626;font-weight:600">📤 Por pagar: ${fmt(toPay, currency)}</span>`;
+    if (toCollect > 0) totalsHtml += `<span style="color:#34D399;font-weight:600">📥 Por cobrar: ${fmt(toCollect, currency)}</span>`;
+    if (toPay > 0)     totalsHtml += `<span style="color:#F87171;font-weight:600">📤 Por pagar: ${fmt(toPay, currency)}</span>`;
     document.getElementById('ppTotals').innerHTML = totalsHtml;
 
     const list = document.getElementById('ppNotesList');
     if (!notes.length) {
-        list.innerHTML = '<div style="color:#94a3b8;font-size:13px">Sin notas para esta persona.</div>';
+        list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Sin notas para esta persona.</div>';
     } else {
         list.innerHTML = notes.map(n => {
             const dirBadge = n.direction === 'cobrar'
@@ -479,10 +445,10 @@ function showPersonPanel(person) {
                 : '<span class="pp-dir-badge pp-pay-badge">📤 Pagar</span>';
             const stClass = n.status === 'pagado' ? 'pp-st-pagado' : n.status === 'parcial' ? 'pp-st-parcial' : 'pp-st-pendiente';
             const stLabel = n.status === 'pagado' ? 'Pagado' : n.status === 'parcial' ? 'Parcial' : 'Pendiente';
-            const catHtml = n.category ? `<span style="font-size:10px;color:#94a3b8;margin-left:6px">${n.catIcon} ${n.category}</span>` : '';
+            const catHtml = n.category ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px">${n.catIcon} ${n.category}</span>` : '';
             const pendHtml = n.pendingAmount > 0
-                ? `<span style="color:#dc2626;font-weight:700;font-size:13px">${fmt(n.pendingAmount, n.currency)}</span>`
-                : '<span style="color:#16a34a">✅</span>';
+                ? `<span style="color:#F87171;font-weight:700;font-size:13px">${fmt(n.pendingAmount, n.currency)}</span>`
+                : '<span style="color:#34D399">✅</span>';
             const payBtn = n.status !== 'pagado'
                 ? `<button class="btn btn-sm btn-success" onclick="openPayNote(${n.noteId},'${n.title.replace(/'/g,"\\'")}',${n.pendingAmount},'${n.currency}')">💰 Pagar</button>`
                 : '';
@@ -490,11 +456,11 @@ function showPersonPanel(person) {
             <div class="pp-note-row">
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:14px">${n.title}${catHtml}</div>
-                    <div style="font-size:11px;color:#94a3b8">${n.noteDate}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">${n.noteDate}</div>
                 </div>
                 ${dirBadge}
                 <div style="text-align:right;min-width:100px">
-                    <div style="font-size:12px;color:#64748b">${fmt(n.amount, n.currency)}</div>
+                    <div style="font-size:12px;color:var(--text-muted)">${fmt(n.amount, n.currency)}</div>
                     <div>${pendHtml}</div>
                 </div>
                 <span class="pp-status ${stClass}">${stLabel}</span>

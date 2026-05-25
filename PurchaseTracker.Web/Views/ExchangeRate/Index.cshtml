@@ -8,15 +8,12 @@
     var updLabel = Model.Updated ?? Model.VentaDate ?? "—";
 }
 
-<div class="page-header">
-    <div>
-        <div class="page-header-title">💱 Tipo de Cambio</div>
-        <div class="page-header-sub">
-            Fuente: BCCR vía GoMeta · Actualizado: @updLabel
-        </div>
-    </div>
-    <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
-        🔄 Actualizar
+<div class="d-flex align-items-center justify-content-between mb-4 gap-2" style="flex-wrap:wrap">
+    <p class="mb-0" style="font-size:var(--text-sm);color:var(--text-secondary)">
+        Fuente: BCCR vía GoMeta &middot; Actualizado: @updLabel
+    </p>
+    <button class="btn btn--outline btn--sm" onclick="location.reload()">
+        <i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Actualizar
     </button>
 </div>
 
@@ -31,54 +28,50 @@
 <!-- ── KPI cards ─────────────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card green" style="border-left:4px solid #10b981">
-            <div class="kpi-icon">📥</div>
-            <div class="kpi-label">Compra (Banco te compra USD)</div>
-            <div class="kpi-value text-money" style="font-size:2rem;color:#10b981">
-                @if (Model.IsError) { <span style="color:#94a3b8">—</span> }
+        <div class="kpi" style="border-left:4px solid var(--success-500)">
+            <span class="kpi__label">📥 Compra (Banco te compra USD)</span>
+            <span class="kpi__value" style="color:var(--success-600)">
+                @if (Model.IsError) { <span style="color:var(--text-tertiary)">—</span> }
                 else { <span>₡ @Model.Compra.ToString("N2")</span> }
-            </div>
-            <div class="kpi-sub">Por cada dólar que vendés al banco</div>
+            </span>
+            <span class="kpi__sub">Por cada dólar que vendés al banco</span>
             @if (!string.IsNullOrWhiteSpace(Model.CompraDate))
             {
-                <div style="font-size:10px;color:#94a3b8;margin-top:4px">@Model.CompraDate</div>
+                <span style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:2px">@Model.CompraDate</span>
             }
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card" style="border-left:4px solid #3b82f6">
-            <div class="kpi-icon">📤</div>
-            <div class="kpi-label">Venta (Banco te vende USD)</div>
-            <div class="kpi-value text-money" style="font-size:2rem;color:#3b82f6">
-                @if (Model.IsError) { <span style="color:#94a3b8">—</span> }
+        <div class="kpi" style="border-left:4px solid #818CF8">
+            <span class="kpi__label">📤 Venta (Banco te vende USD)</span>
+            <span class="kpi__value" style="color:#6366f1">
+                @if (Model.IsError) { <span style="color:var(--text-tertiary)">—</span> }
                 else { <span>₡ @Model.Venta.ToString("N2")</span> }
-            </div>
-            <div class="kpi-sub">Por cada dólar que le comprás al banco</div>
+            </span>
+            <span class="kpi__sub">Por cada dólar que le comprás al banco</span>
             @if (!string.IsNullOrWhiteSpace(Model.VentaDate))
             {
-                <div style="font-size:10px;color:#94a3b8;margin-top:4px">@Model.VentaDate</div>
+                <span style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:2px">@Model.VentaDate</span>
             }
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card purple" style="border-left:4px solid #8b5cf6">
-            <div class="kpi-icon">↔️</div>
-            <div class="kpi-label">Margen banco (spread)</div>
-            <div class="kpi-value text-money" style="font-size:2rem;color:#8b5cf6">
-                @if (Model.IsError) { <span style="color:#94a3b8">—</span> }
+        <div class="kpi" style="border-left:4px solid var(--brand-400)">
+            <span class="kpi__label">↔️ Margen banco (spread)</span>
+            <span class="kpi__value" style="color:var(--brand-600)">
+                @if (Model.IsError) { <span style="color:var(--text-tertiary)">—</span> }
                 else { <span>₡ @((Model.Venta - Model.Compra).ToString("N2"))</span> }
-            </div>
-            <div class="kpi-sub">Diferencia entre compra y venta</div>
+            </span>
+            <span class="kpi__sub">Diferencia entre compra y venta</span>
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card orange" style="border-left:4px solid #f59e0b">
-            <div class="kpi-icon">🕐</div>
-            <div class="kpi-label">Última consulta</div>
-            <div class="kpi-value" style="font-size:1.1rem;color:#d97706">
+        <div class="kpi" style="border-left:4px solid var(--warning-500)">
+            <span class="kpi__label">🕐 Última consulta</span>
+            <span class="kpi__value" style="color:var(--warning-600)">
                 @Model.FetchedAt.ToLocalTime().ToString("HH:mm")
-            </div>
-            <div class="kpi-sub">@Model.FetchedAt.ToLocalTime().ToString("dd/MM/yyyy") · caché 30 min</div>
+            </span>
+            <span class="kpi__sub">@Model.FetchedAt.ToLocalTime().ToString("dd/MM/yyyy") · caché 30 min</span>
         </div>
     </div>
 </div>
@@ -87,24 +80,22 @@
 <div class="row g-4">
     <div class="col-xl-7">
         <div class="card">
-            <div class="card-header d-flex align-items-center gap-2">
-                <span style="font-size:18px">⇄</span>
-                <span>Conversor USD / CRC</span>
-            </div>
-            <div class="card-body" style="padding:28px 32px">
+            <div class="card__header"><span class="card__title">⇄ Conversor USD / CRC</span></div>
+            <div class="card__body" style="padding:var(--sp-6) var(--sp-7)">
 
                 @if (Model.IsError)
                 {
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📡</div>
-                        <div class="empty-state-text">No hay tipo de cambio disponible</div>
+                    <div class="empty">
+                        <div class="empty__icon">📡</div>
+                        <p class="empty__title">Sin datos disponibles</p>
+                        <p class="empty__text">No hay tipo de cambio disponible en este momento</p>
                     </div>
                 }
                 else
                 {
                     <!-- Monto de entrada -->
                     <div class="mb-4">
-                        <label class="form-label fw-600" style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em">
+                        <label class="form-label fw-600" style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">
                             Monto a convertir
                         </label>
                         <div class="d-flex gap-2 align-items-center">
@@ -112,11 +103,11 @@
                                    type="number" min="0" step="0.01"
                                    placeholder="0.00"
                                    class="form-control"
-                                   style="font-size:28px;font-weight:700;text-align:right;height:62px;border-radius:12px;border:2px solid #e2e8f0;font-variant-numeric:tabular-nums"
+                                   style="font-size:28px;font-weight:700;text-align:right;height:62px;border-radius:12px;font-variant-numeric:tabular-nums"
                                    oninput="calcAll()" />
                             <div style="flex-shrink:0">
                                 <select id="convFrom" class="form-select"
-                                        style="font-size:16px;font-weight:700;height:62px;border-radius:12px;border:2px solid #e2e8f0;min-width:90px"
+                                        style="font-size:16px;font-weight:700;height:62px;border-radius:12px;min-width:90px"
                                         onchange="calcAll()">
                                     <option value="USD">🇺🇸 USD</option>
                                     <option value="CRC">🇨🇷 CRC</option>
@@ -128,9 +119,9 @@
                     <!-- Botón swap -->
                     <div class="text-center mb-4">
                         <button onclick="swapCurrencies()"
-                                style="background:#f1f5f9;border:2px solid #e2e8f0;border-radius:50%;width:44px;height:44px;font-size:18px;cursor:pointer;transition:all .2s"
-                                onmouseover="this.style.background='#e2e8f0'"
-                                onmouseout="this.style.background='#f1f5f9'"
+                                style="background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:50%;width:44px;height:44px;font-size:18px;cursor:pointer;transition:all .2s;color:var(--text-secondary)"
+                                onmouseover="this.style.background='var(--bg-hover)'"
+                                onmouseout="this.style.background='var(--bg-elevated)'"
                                 title="Intercambiar monedas">
                             ⇅
                         </button>
@@ -138,16 +129,16 @@
 
                     <!-- Resultado -->
                     <div class="mb-4">
-                        <label class="form-label fw-600" style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em">
+                        <label class="form-label fw-600" style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">
                             Resultado
                         </label>
                         <div class="d-flex gap-2 align-items-center">
                             <div id="convResult"
-                                 style="flex:1;font-size:28px;font-weight:700;text-align:right;height:62px;border-radius:12px;border:2px solid #e2e8f0;padding:0 18px;display:flex;align-items:center;justify-content:flex-end;background:#f8fafc;color:#0f172a;font-variant-numeric:tabular-nums">
+                                 style="flex:1;font-size:28px;font-weight:700;text-align:right;height:62px;border-radius:12px;border:1px solid var(--border-strong);padding:0 18px;display:flex;align-items:center;justify-content:flex-end;background:var(--bg-elevated);color:var(--text-primary);font-variant-numeric:tabular-nums">
                                 —
                             </div>
                             <div id="convToLabel"
-                                 style="flex-shrink:0;font-size:16px;font-weight:700;background:#f1f5f9;border:2px solid #e2e8f0;border-radius:12px;height:62px;min-width:90px;display:flex;align-items:center;justify-content:center;color:#475569">
+                                 style="flex-shrink:0;font-size:16px;font-weight:700;background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:12px;height:62px;min-width:90px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary)">
                                 🇨🇷 CRC
                             </div>
                         </div>
@@ -155,7 +146,7 @@
 
                     <!-- Tasa usada -->
                     <div id="convRateNote"
-                         style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;font-size:13px;color:#0369a1">
+                         style="background:var(--accent-subtle);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#818CF8">
                         Ingresa un monto para ver la conversión
                     </div>
                 }
@@ -167,9 +158,8 @@
     <div class="col-xl-5">
         @if (!Model.IsError)
         {
-            <div class="card mb-4">
-                <div class="card-header">📋 Referencia rápida — USD → CRC</div>
-                <div class="card-body p-0">
+            <div class="card" style="margin-bottom:var(--sp-4)">
+                <div class="card__header"><span class="card__title">📋 Referencia rápida — USD → CRC</span></div>
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
@@ -189,12 +179,10 @@
                             }
                         </tbody>
                     </table>
-                </div>
             </div>
 
             <div class="card">
-                <div class="card-header">📋 Referencia rápida — CRC → USD</div>
-                <div class="card-body p-0">
+                <div class="card__header"><span class="card__title">📋 Referencia rápida — CRC → USD</span></div>
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
@@ -214,7 +202,6 @@
                             }
                         </tbody>
                     </table>
-                </div>
             </div>
         }
     </div>
@@ -246,9 +233,9 @@
         if (isNaN(raw) || raw <= 0) {
             resEl.textContent = '—';
             noteEl.innerHTML  = 'Ingresa un monto para ver la conversión';
-            noteEl.style.background = '#f0f9ff';
-            noteEl.style.borderColor = '#bae6fd';
-            noteEl.style.color = '#0369a1';
+            noteEl.style.background  = 'rgba(99,102,241,0.12)';
+            noteEl.style.borderColor = 'rgba(99,102,241,.2)';
+            noteEl.style.color       = '#818CF8';
             return;
         }
 
@@ -271,9 +258,9 @@
             ? '📤 Usando tasa de <strong>' + tasaNombre + '</strong> (₡' + tasa.toLocaleString('es-CR', {minimumFractionDigits:2}) + ') — lo que el banco cobra por el dólar'
             : '📥 Usando tasa de <strong>' + tasaNombre + '</strong> (₡' + tasa.toLocaleString('es-CR', {minimumFractionDigits:2}) + ') — lo que el banco paga por el colón';
         noteEl.innerHTML  = urgency;
-        noteEl.style.background  = from === 'USD' ? '#eff6ff' : '#f0fdf4';
-        noteEl.style.borderColor = from === 'USD' ? '#bae6fd' : '#bbf7d0';
-        noteEl.style.color       = from === 'USD' ? '#1d4ed8' : '#15803d';
+        noteEl.style.background  = from === 'USD' ? 'rgba(99,102,241,0.12)' : 'rgba(16,185,129,0.12)';
+        noteEl.style.borderColor = from === 'USD' ? 'rgba(99,102,241,.2)'   : 'rgba(16,185,129,.2)';
+        noteEl.style.color       = from === 'USD' ? '#818CF8'                : '#34D399';
     };
 
     window.swapCurrencies = function () {

@@ -437,3 +437,154 @@ function txComplete(tx) {
     tx.onerror    = () => reject(tx.error);
   });
 }
+
+/* ══════════════════════════════════════════════════════════ */
+/* 10. DARK MODE                                              */
+/* ══════════════════════════════════════════════════════════ */
+
+const DARK_KEY = 'pt-theme';
+
+// Run immediately (before DOMContentLoaded) to prevent flash
+(function initDarkMode() {
+  const stored = localStorage.getItem(DARK_KEY);
+  const html   = document.documentElement;
+  if (stored === 'dark')  html.setAttribute('data-theme', 'dark');
+  if (stored === 'light') html.setAttribute('data-theme', 'light');
+  // else: no attribute → system preference via @media prefers-color-scheme takes over
+})();
+
+function updateDarkToggleIcons() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+    (!document.documentElement.hasAttribute('data-theme') &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelectorAll('[data-dark-toggle]').forEach(btn => {
+    btn.setAttribute('aria-label', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+    btn.setAttribute('title',      isDark ? 'Modo claro' : 'Modo oscuro');
+  });
+}
+
+PT.toggleDarkMode = function () {
+  const html      = document.documentElement;
+  const isDark    = html.getAttribute('data-theme') === 'dark' ||
+    (!html.hasAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const next      = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem(DARK_KEY, next);
+  updateDarkToggleIcons();
+  // Re-init Lucide icons (they're SVG — no re-render needed, but trigger for safety)
+  if (window.lucide) window.lucide.createIcons();
+};
+
+document.addEventListener('DOMContentLoaded', updateDarkToggleIcons);
+
+/* ══════════════════════════════════════════════════════════ */
+/* 11. WALLET CARD CAROUSEL DOTS                              */
+/* ══════════════════════════════════════════════════════════ */
+
+function initWalletCarousel() {
+  const carousel = document.getElementById('walletCards');
+  const dotsEl   = document.getElementById('walletDots');
+  if (!carousel || !dotsEl) return;
+
+  const items = Array.from(carousel.querySelectorAll('.wallet-cards__item'));
+  const dots  = Array.from(dotsEl.querySelectorAll('.wallet-dot'));
+  if (!items.length || !dots.length) return;
+
+  function setActive(idx) {
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+
+  // Click on dot → scroll to that card
+  dots.forEach((dot, i) => {
+    dot.addEventListener('click', () => {
+      items[i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    });
+  });
+
+  // IntersectionObserver to sync active dot when scrolling
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+        const idx = items.indexOf(entry.target);
+        if (idx !== -1) setActive(idx);
+      }
+    });
+  }, { root: carousel, threshold: 0.5 });
+
+  items.forEach(item => io.observe(item));
+  setActive(0);
+}
+
+document.addEventListener('DOMContentLoaded', initWalletCarousel);
+
+/* ══════════════════════════════════════════════════════════ */
+/* 12. QUICK-ADD SHEET NUMPAD                                  */
+/* ══════════════════════════════════════════════════════════ */
+
+function initQuickAddSheet() {
+  const sheetEl   = document.getElementById('quick-add-sheet');
+  const displayEl = document.getElementById('qa-amount-display');
+  const inputEl   = document.getElementById('qa-amount-input');
+  const formEl    = document.getElementById('qa-form');
+  if (!sheetEl || !displayEl || !inputEl || !formEl) return;
+
+  const numpad = new AmountNumpad({
+    displayEl,
+    inputEl,
+    onConfirm(val) {
+      if (parseFloat(val) > 0) formEl.submit();
+    },
+  });
+
+  // Wire numpad keys
+  sheetEl.querySelectorAll('.numpad__key[data-key]').forEach(key => {
+    key.addEventListener('click', () => numpad.press(key.dataset.key));
+  });
+
+  // Currency toggle
+  sheetEl.querySelectorAll('.currency-toggle__option').forEach(opt => {
+    opt.addEventListener('click', function () {
+      sheetEl.querySelectorAll('.currency-toggle__option').forEach(o => {
+        o.classList.remove('btn--primary');
+        o.classList.add('btn--ghost');
+      });
+      this.classList.remove('btn--ghost');
+      this.classList.add('btn--primary');
+      const cur = this.dataset.currency;
+      const curInput = document.getElementById('qa-currency-input');
+      if (curInput) curInput.value = cur;
+    });
+  });
+
+  // Type pills
+  sheetEl.querySelectorAll('.qa-type-pill').forEach(pill => {
+    pill.addEventListener('click', function () {
+      sheetEl.querySelectorAll('.qa-type-pill').forEach(p => {
+        p.classList.remove('btn--primary');
+        p.classList.add('btn--ghost');
+      });
+      this.classList.remove('btn--ghost');
+      this.classList.add('btn--primary');
+      const typeInput = document.getElementById('qa-type-input');
+      if (typeInput) typeInput.value = this.dataset.type;
+    });
+  });
+
+  // Confirm button: submit only if amount > 0
+  formEl.addEventListener('submit', e => {
+    const val = parseFloat(inputEl.value);
+    if (!val || val <= 0) {
+      e.preventDefault();
+      displayEl.style.animation = 'none';
+      displayEl.offsetHeight; // reflow
+      displayEl.style.animation = 'shake .3s ease-out';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initQuickAddSheet);
+
+// Shake animation for empty amount
+const _shakeStyle = document.createElement('style');
+_shakeStyle.textContent = `@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}`;
+document.head.appendChild(_shakeStyle);
