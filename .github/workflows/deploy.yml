@@ -34,16 +34,23 @@ jobs:
 
       # 6. Deploy via Web Deploy (MSDeploy) a siteasp.net
       - name: Deploy via Web Deploy
-        run: |
-          $msdeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          & $msdeployPath `
-            -verb:sync `
-            -source:contentPath="$(Resolve-Path ./publish-output)" `
-            -dest:contentPath="site60072",`
-                  computerName="https://site60072.siteasp.net:8172/msdeploy.axd?site=site60072",`
-                  userName="site60072",`
-                  password="${{ secrets.WEBDEPLOY_PASSWORD }}",`
-                  authType="Basic" `
-            -allowUntrusted `
-            -enableRule:AppOffline
+        env:
+          DEPLOY_PASSWORD: ${{ secrets.WEBDEPLOY_PASSWORD }}
         shell: pwsh
+        run: |
+          $msdeploy  = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          $publishPath = (Resolve-Path ./publish-output).Path
+          $password    = $env:DEPLOY_PASSWORD
+          $computerName = "https://site60072.siteasp.net:8172/msdeploy.axd?site=site60072"
+
+          # Cada elemento del array es un argumento separado — sin backtick ni comas en líneas distintas
+          $arguments = @(
+            "-verb:sync",
+            "-source:contentPath=$publishPath",
+            "-dest:contentPath=site60072,computerName=$computerName,userName=site60072,password=$password,authType=Basic",
+            "-allowUntrusted",
+            "-enableRule:AppOffline"
+          )
+
+          & $msdeploy @arguments
+          exit $LASTEXITCODE
